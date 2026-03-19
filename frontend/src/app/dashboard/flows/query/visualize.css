@@ -1,0 +1,233 @@
+/* ── Visualize page styles ──────────────────────────────────────────── */
+.vz-page .page-subtitle {
+  color: rgba(255,255,255,.45);
+  font-size: .85rem;
+  margin: .25rem 0 0;
+}
+
+/* ── Toolbar ── */
+.vz-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: .75rem 1rem;
+  padding: 1rem 1.25rem;
+  border-radius: 12px;
+  background: rgba(255,255,255,.03);
+  border: 1px solid rgba(255,255,255,.07);
+  margin-bottom: 1.5rem;
+}
+
+.vz-group { display: flex; flex-direction: column; gap: .3rem; }
+.vz-group--filter { flex: 1 1 200px; }
+
+.vz-label {
+  font-size: .65rem;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: rgba(255,255,255,.4);
+  font-weight: 600;
+}
+
+/* Chips */
+.vz-chips-wrap { display: flex; flex-wrap: wrap; gap: .35rem; }
+.vz-chip {
+  display: inline-flex; align-items: center; gap: .25rem;
+  padding: .25rem .6rem;
+  border-radius: 999px;
+  font-size: .75rem;
+  font-weight: 500;
+  background: rgba(99,102,241,.2);
+  color: #a5b4fc;
+  border: 1px solid rgba(99,102,241,.3);
+}
+.vz-chip-x {
+  background: none; border: none; color: inherit;
+  cursor: pointer; font-size: .9rem; line-height: 1;
+  padding: 0; margin-left: 2px; opacity: .7;
+}
+.vz-chip-x:hover { opacity: 1; }
+.vz-chip--add {
+  background: rgba(255,255,255,.06);
+  border: 1px dashed rgba(255,255,255,.2);
+  color: rgba(255,255,255,.55);
+  cursor: pointer;
+  transition: all .15s;
+}
+.vz-chip--add:hover {
+  background: rgba(255,255,255,.1);
+  color: rgba(255,255,255,.8);
+}
+
+/* Dimension picker dropdown */
+.vz-dim-picker {
+  position: absolute;
+  z-index: 100;
+  margin-top: .3rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: .3rem;
+  padding: .6rem;
+  border-radius: 10px;
+  background: #1a1a2e;
+  border: 1px solid rgba(255,255,255,.12);
+  box-shadow: 0 8px 32px rgba(0,0,0,.5);
+  max-width: 400px;
+}
+.vz-dim-option {
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 6px;
+  padding: .3rem .6rem;
+  color: rgba(255,255,255,.75);
+  font-size: .72rem;
+  cursor: pointer;
+  transition: all .12s;
+}
+.vz-dim-option:hover {
+  background: rgba(99,102,241,.25);
+  border-color: rgba(99,102,241,.4);
+  color: #c7d2fe;
+}
+
+/* Toggle pair */
+.vz-toggle-pair { display: flex; gap: 0; }
+.vz-toggle {
+  padding: .35rem .7rem;
+  font-size: .72rem;
+  font-weight: 600;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.04);
+  color: rgba(255,255,255,.45);
+  cursor: pointer;
+  transition: all .15s;
+}
+.vz-toggle:first-child { border-radius: 6px 0 0 6px; }
+.vz-toggle:last-child  { border-radius: 0 6px 6px 0; border-left: 0; }
+.vz-toggle.active {
+  background: rgba(99,102,241,.22);
+  border-color: rgba(99,102,241,.4);
+  color: #c7d2fe;
+}
+
+/* Select, number, text inputs */
+.vz-select, .vz-input-num, .vz-input-text {
+  padding: .35rem .55rem;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.04);
+  color: rgba(255,255,255,.85);
+  font-size: .78rem;
+  outline: none;
+  transition: border-color .15s;
+}
+.vz-select:focus, .vz-input-num:focus, .vz-input-text:focus {
+  border-color: rgba(99,102,241,.5);
+}
+.vz-input-num { width: 55px; text-align: center; }
+.vz-input-text { width: 100%; }
+
+/* Chart type icons */
+.vz-chart-icons { display: flex; gap: .2rem; }
+.vz-chart-btn {
+  width: 30px; height: 30px;
+  display: grid; place-items: center;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 6px;
+  background: rgba(255,255,255,.04);
+  color: rgba(255,255,255,.4);
+  cursor: pointer;
+  transition: all .15s;
+}
+.vz-chart-btn .material-symbols-outlined { font-size: 16px; }
+.vz-chart-btn.active {
+  background: rgba(99,102,241,.22);
+  border-color: rgba(99,102,241,.4);
+  color: #c7d2fe;
+}
+.vz-chart-btn:hover:not(.active) {
+  background: rgba(255,255,255,.08);
+  color: rgba(255,255,255,.7);
+}
+
+/* Run button */
+.vz-run {
+  display: inline-flex; align-items: center; gap: .35rem;
+  padding: .4rem 1rem;
+  border-radius: 8px;
+  border: none;
+  background: linear-gradient(135deg, #6366f1, #a855f7);
+  color: #fff;
+  font-weight: 600;
+  font-size: .8rem;
+  cursor: pointer;
+  transition: opacity .15s, transform .1s;
+}
+.vz-run:hover { opacity: .9; transform: translateY(-1px); }
+.vz-run:disabled { opacity: .5; cursor: wait; }
+.vz-run .material-symbols-outlined { font-size: 18px; }
+.spin { animation: spin-vz .8s linear infinite; }
+@keyframes spin-vz { to { transform: rotate(360deg); } }
+
+/* ── Chart area ── */
+.vz-chart-area {
+  padding: 1rem 0;
+}
+
+/* ── Table ── */
+.vz-table-wrap {
+  overflow-x: auto;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,.07);
+}
+.vz-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .78rem;
+}
+.vz-table th {
+  text-align: left;
+  padding: .55rem .85rem;
+  background: rgba(255,255,255,.04);
+  color: rgba(255,255,255,.55);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: .65rem;
+  letter-spacing: .05em;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+.vz-table td {
+  padding: .5rem .85rem;
+  border-bottom: 1px solid rgba(255,255,255,.04);
+  color: rgba(255,255,255,.8);
+}
+.vz-table tr:hover td { background: rgba(255,255,255,.03); }
+.vz-rank {
+  color: rgba(255,255,255,.3);
+  font-size: .7rem;
+  font-weight: 600;
+}
+.vz-mono { font-family: "JetBrains Mono", "Fira Code", monospace; font-size: .72rem; }
+.text-right { text-align: right; }
+
+/* ── Empty / Error ── */
+.vz-empty {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: rgba(255,255,255,.3);
+}
+.vz-empty .material-symbols-outlined { font-size: 56px; opacity: .3; display: block; margin-bottom: .75rem; }
+.vz-empty h3 { margin: 0 0 .5rem; font-weight: 600; color: rgba(255,255,255,.5); }
+.vz-empty p { font-size: .85rem; max-width: 400px; margin: 0 auto; }
+
+.vz-error {
+  display: flex; align-items: center; gap: .5rem;
+  padding: .75rem 1rem;
+  border-radius: 8px;
+  background: rgba(239,68,68,.12);
+  border: 1px solid rgba(239,68,68,.25);
+  color: #fca5a5;
+  font-size: .8rem;
+  margin-bottom: 1rem;
+}
+.vz-error .material-symbols-outlined { font-size: 18px; }

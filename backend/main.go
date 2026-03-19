@@ -152,6 +152,7 @@ func main() {
 	protected.Get("/metrics/flows/asns", handlers.GetTopASNs)              // P4
 	protected.Get("/metrics/flows/geo", handlers.GetGeoFlows)              // P5 — geo map arcs
 	protected.Get("/metrics/flows/sankey", handlers.GetSankeyFlows)        // P5 — sankey diagram
+	protected.Post("/metrics/flows/query", handlers.FlowQuery)             // P6 — flexible visualize
 	protected.Get("/metrics/topology", handlers.GetTopologyMap)
 
 	// ── Config / Automation routes ──────────────────────────────────────────

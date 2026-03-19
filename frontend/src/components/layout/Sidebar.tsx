@@ -53,7 +53,7 @@ export const NAV_SECTIONS: NavSection[] = [
     subItems: [
       { label: "Live Flow", path: "/dashboard/flows" },
       { label: "Top Talkers", path: "/dashboard/flows/talkers" },
-      { label: "Flow Queries", path: "/dashboard/flows/query" },
+      { label: "Visualize", path: "/dashboard/flows/query" },
     ],
   },
   {

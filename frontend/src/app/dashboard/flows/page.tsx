@@ -4,9 +4,9 @@ import dynamic from "next/dynamic";
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
-  BarChart, Bar,
 } from "recharts";
 import { api } from "@/lib/api";
+import "./flows.css";
 
 const GeoFlowMap    = dynamic(() => import("@/components/flows/GeoFlowMap"),    { ssr: false });
 const SankeyDiagram = dynamic(() => import("@/components/flows/SankeyDiagram"), { ssr: false });
@@ -37,11 +37,22 @@ function fmtBps(v: number) {
   if (v >= 1e3) return (v / 1e3).toFixed(1) + " Kbps";
   return v.toFixed(0) + " bps";
 }
+function fmtTime(d: Date) {
+  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+}
 
 /* ── Colours ── */
 const PALETTE  = ["#6366f1","#10b981","#f59e0b","#ef4444","#3b82f6","#ec4899","#8b5cf6","#14b8a6","#f97316","#a3e635"];
 const DONUT_COLORS = ["#6366f1","#10b981","#f59e0b","#ef4444"];
 const PROTO_COLORS: Record<string, string> = { TCP:"#6366f1", UDP:"#10b981", ICMP:"#f59e0b" };
+
+/* ── KPI gradient class map ── */
+const KPI_VARIANTS: Record<string, string> = {
+  primary: "kpi-card--primary",
+  green:   "kpi-card--green",
+  indigo:  "kpi-card--indigo",
+  accent:  "kpi-card--accent",
+};
 
 /* ── Protocol Donut ── */
 function ProtocolDonut({ bw }: { bw: BwStats | null }) {
@@ -200,6 +211,7 @@ export default function FlowsPage() {
   const [topApps,    setTopApps]    = useState<AppEntry[]>([]);
   const [topASNs,    setTopASNs]    = useState<ASNEntry[]>([]);
   const [loading,    setLoading]    = useState(true);
+  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
 
   useEffect(() => {
     const fetchAll = () => {
@@ -209,7 +221,7 @@ export default function FlowsPage() {
         api.getFlowTimeSeries().then(d => setTimeSeries((d as any) ?? [])),
         api.getTopApplications().then(d => setTopApps((d as any) ?? [])),
         api.getTopASNs().then(d       => setTopASNs((d as any) ?? [])),
-      ]).finally(() => setLoading(false));
+      ]).finally(() => { setLoading(false); setLastUpdate(new Date()); });
     };
     fetchAll();
     const t = setInterval(fetchAll, 30_000);
@@ -219,27 +231,30 @@ export default function FlowsPage() {
   const maxBytes   = topTalkers[0]?.total_bytes ?? 1;
   const totalBytes = topTalkers.reduce((s, t) => s + (t.total_bytes ?? 0), 0);
 
+  const kpis = [
+    { label:"Total Volume (1h)", value:loading ? "—" : (bwStats ? bwStats.total_gb.toFixed(2)+" GB" : "—"), color:"var(--color-primary)", icon:"storage",     variant:"primary" },
+    { label:"Active Flows",      value:loading ? "—" : (bwStats ? String(bwStats.active_flows ?? "—") : "—"), color:"#10b981",               icon:"stream",      variant:"green",  pulse: !loading && (bwStats?.active_flows ?? 0) > 0 },
+    { label:"TCP Share",         value:loading ? "—" : (bwStats ? bwStats.tcp_pct.toFixed(0)+"%" : "—"),     color:"#6366f1",               icon:"sync_alt",    variant:"indigo" },
+    { label:"Top Talkers",       value:loading ? "—" : String(topTalkers.length),                            color:"var(--color-accent)",   icon:"leaderboard", variant:"accent" },
+  ];
+
   return (
     <div className="flex flex-col gap-5">
       {/* Header */}
-      <div>
+      <div className="flow-animate flow-animate-d1">
         <h1 className="text-2xl font-bold" style={{ color:"var(--color-text)" }}>NetFlow Analytics</h1>
         <p className="text-sm mt-0.5" style={{ color:"var(--color-text-dim)" }}>Real-time flow telemetry — 30s auto-refresh</p>
       </div>
 
       {/* KPI row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {[
-          { label:"Total Volume (1h)", value:loading ? "—" : (bwStats ? bwStats.total_gb.toFixed(2)+" GB" : "—"), color:"var(--color-primary)", icon:"storage" },
-          { label:"Active Flows",      value:loading ? "—" : (bwStats ? String(bwStats.active_flows ?? "—") : "—"), color:"#10b981",               icon:"stream" },
-          { label:"TCP Share",         value:loading ? "—" : (bwStats ? bwStats.tcp_pct.toFixed(0)+"%" : "—"),     color:"#6366f1",               icon:"sync_alt" },
-          { label:"Top Talkers",       value:loading ? "—" : String(topTalkers.length),                            color:"var(--color-accent)",   icon:"leaderboard" },
-        ].map(k => (
-          <div key={k.label} className="rounded-xl p-4"
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 flow-animate flow-animate-d2">
+        {kpis.map(k => (
+          <div key={k.label} className={`kpi-card ${KPI_VARIANTS[k.variant] ?? ""} rounded-xl p-4`}
             style={{ background:"var(--color-surface-1)", border:"1px solid var(--color-border)" }}>
             <div className="flex items-center gap-2 mb-1">
               <span className="material-symbols-outlined text-sm" style={{ color:k.color }}>{k.icon}</span>
               <span className="text-xs" style={{ color:"var(--color-text-dim)" }}>{k.label}</span>
+              {k.pulse && <span className="pulse-dot ml-auto" />}
             </div>
             <div className="text-2xl font-bold font-metric" style={{ color:k.color }}>{k.value}</div>
           </div>
@@ -247,25 +262,26 @@ export default function FlowsPage() {
       </div>
 
       {/* Bandwidth Timeseries — full width */}
-      <div className="rounded-2xl p-5"
+      <div className="flow-card rounded-2xl p-5 flow-animate flow-animate-d3"
         style={{ background:"var(--color-surface-1)", border:"1px solid var(--color-border)" }}>
         <div className="flex items-center gap-2 mb-4">
           <span className="material-symbols-outlined text-base" style={{ color:"var(--color-primary)" }}>show_chart</span>
           <span className="text-sm font-semibold" style={{ color:"var(--color-text)" }}>Bandwidth (1h — 5-min buckets)</span>
           <div className="ml-auto flex items-center gap-4 text-xs" style={{ color:"var(--color-text-dim)" }}>
+            <span className="last-updated">Updated {fmtTime(lastUpdate)}</span>
             <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 rounded inline-block" style={{ background:"#6366f1" }} /> Inbound</span>
             <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 rounded inline-block" style={{ background:"#10b981" }} /> Outbound</span>
           </div>
         </div>
-        <div className="h-48">
+        <div className="h-56">
           <BwTimeSeries data={timeSeries} />
         </div>
       </div>
 
       {/* Second row: Protocol Donut | Top Talkers */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 flow-animate flow-animate-d4">
         {/* Protocol Donut */}
-        <div className="rounded-2xl p-5"
+        <div className="flow-card rounded-2xl p-5"
           style={{ background:"var(--color-surface-1)", border:"1px solid var(--color-border)" }}>
           <div className="flex items-center gap-2 mb-4">
             <span className="material-symbols-outlined text-base" style={{ color:"var(--color-primary)" }}>donut_small</span>
@@ -280,7 +296,7 @@ export default function FlowsPage() {
         </div>
 
         {/* Top Talkers */}
-        <div className="rounded-2xl overflow-hidden"
+        <div className="flow-card rounded-2xl overflow-hidden"
           style={{ background:"var(--color-surface-1)", border:"1px solid var(--color-border)" }}>
           <div className="flex items-center gap-2 px-5 py-3 border-b" style={{ borderColor:"var(--color-border)" }}>
             <span className="material-symbols-outlined text-base" style={{ color:"var(--color-accent)" }}>leaderboard</span>
@@ -297,7 +313,7 @@ export default function FlowsPage() {
             ) : topTalkers.map((t, i) => {
               const pct = (t.total_bytes / maxBytes) * 100;
               return (
-                <div key={i} className="px-5 py-2.5 flex items-center gap-3"
+                <div key={i} className="talker-row px-5 py-2.5 flex items-center gap-3"
                   style={{ borderBottom:"1px solid var(--color-border)" }}>
                   <span className="w-5 shrink-0 text-right text-xs font-semibold" style={{ color:"var(--color-text-dim)" }}>{i+1}</span>
                   <div className="flex-1 min-w-0">
@@ -330,9 +346,9 @@ export default function FlowsPage() {
       </div>
 
       {/* Third row: Top Applications | Top ASNs */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 flow-animate flow-animate-d5">
         {/* Top Applications */}
-        <div className="rounded-2xl p-5"
+        <div className="flow-card rounded-2xl p-5"
           style={{ background:"var(--color-surface-1)", border:"1px solid var(--color-border)" }}>
           <div className="flex items-center gap-2 mb-4">
             <span className="material-symbols-outlined text-base" style={{ color:"#f59e0b" }}>apps</span>
@@ -342,7 +358,7 @@ export default function FlowsPage() {
         </div>
 
         {/* Top ASNs */}
-        <div className="rounded-2xl p-5"
+        <div className="flow-card rounded-2xl p-5"
           style={{ background:"var(--color-surface-1)", border:"1px solid var(--color-border)" }}>
           <div className="flex items-center gap-2 mb-4">
             <span className="material-symbols-outlined text-base" style={{ color:"#3b82f6" }}>public</span>
@@ -353,23 +369,27 @@ export default function FlowsPage() {
       </div>
 
       {/* ── Row 4 – Full-width Geo Traffic Map ── */}
-      <div className="rounded-2xl p-5"
+      <div className="flow-card rounded-2xl p-5 flow-animate flow-animate-d6"
         style={{ background:"var(--color-surface-1)", border:"1px solid var(--color-border)" }}>
         <div className="flex items-center gap-2 mb-4">
           <span className="material-symbols-outlined text-base" style={{ color:"#6366f1" }}>travel_explore</span>
           <span className="text-sm font-semibold" style={{ color:"var(--color-text)" }}>Geographic Traffic (1h)</span>
+          <div className="ml-auto map-legend">
+            <span className="flex items-center gap-1"><span className="map-legend-dot" style={{ background:"#8b5cf6" }} /> Source</span>
+            <span className="flex items-center gap-1"><span className="map-legend-dot" style={{ background:"#10b981" }} /> Destination</span>
+          </div>
         </div>
         <div className="h-[340px]"><GeoFlowMap /></div>
       </div>
 
       {/* ── Row 5 – Full-width Sankey Diagram ── */}
-      <div className="rounded-2xl p-5"
+      <div className="flow-card rounded-2xl p-5 flow-animate flow-animate-d6"
         style={{ background:"var(--color-surface-1)", border:"1px solid var(--color-border)" }}>
         <div className="flex items-center gap-2 mb-4">
           <span className="material-symbols-outlined text-base" style={{ color:"#8b5cf6" }}>account_tree</span>
           <span className="text-sm font-semibold" style={{ color:"var(--color-text)" }}>Traffic Flow: Source → Protocol → App (1h)</span>
         </div>
-        <div className="h-[300px]"><SankeyDiagram /></div>
+        <div className="h-[340px]"><SankeyDiagram /></div>
       </div>
     </div>
   );

@@ -119,6 +119,17 @@ export const api = {
   getTopASNs: () => apiFetch("/api/metrics/flows/asns"),
   getGeoFlows: () => apiFetch("/api/metrics/flows/geo"),
   getSankeyFlows: () => apiFetch("/api/metrics/flows/sankey"),
+  queryFlows: (body: {
+    dimensions: string[];
+    metric: "bytes" | "packets";
+    time_range: string;
+    limit: number;
+    filter?: string;
+  }) =>
+    apiFetch("/api/metrics/flows/query", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
   getInterfaceMetrics: (deviceId?: number) =>
     apiFetch(`/api/metrics/interfaces${deviceId ? `?device_id=${deviceId}` : ""}`),
   getInterfaceSparklines: (deviceId: number) =>
