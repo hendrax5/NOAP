@@ -77,7 +77,7 @@ func (t *chTransport) lookupDevice(ip string) *models.Device {
 // Send is called by GoFlow2 for every decoded flow message.
 // data contains the protobuf-serialised FlowMessage.
 func (t *chTransport) Send(key, data []byte) error {
-	if database.CH == nil {
+	if FlowChan == nil {
 		return nil
 	}
 
@@ -130,38 +130,45 @@ func (t *chTransport) Send(key, data []byte) error {
 	flowTypeName := flowTypeLabel(msg.Type)
 
 	// ── Sampling rate correction ─────────────────────────────────────────
-	// Routers with sampling (e.g. 1:1000) only export a fraction of packets.
-	// GoFlow2 populates SamplingRate from the flow record (NetFlow v9
-	// option template / IPFIX #305 / sFlow header).  Multiply bytes and
-	// packets by this factor so stored volumes match interface counters.
-	samplingRate := uint64(msg.SamplingRate)
-	if samplingRate == 0 {
-		samplingRate = 1 // no sampling info → store as-is
-	}
+	// Uses configurable priority chain:
+	//   FLOW_OVERRIDE_SAMPLING_RATE → device-reported → FLOW_DEFAULT_SAMPLING_RATE → 1
+	samplingRate := EffectiveSamplingRate(uint64(msg.SamplingRate))
 	adjustedBytes := msg.Bytes * samplingRate
 	adjustedPackets := msg.Packets * samplingRate
 
-	q := `INSERT INTO metrics_flow
-		(tenant_id, device_id, timestamp,
-		 src_ip, dst_ip, src_port, dst_port, protocol, bytes, packets,
-		 src_asn, dst_asn, src_asn_name, dst_asn_name, app,
-		 flow_type, in_if, out_if, tos, tcp_flags, vlan_id, next_hop,
-		 src_country, dst_country, src_city, dst_city,
-		 src_lat, src_lon, dst_lat, dst_lon)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-
-	if err := database.CH.Exec(context.Background(), q,
-		dev.TenantID, dev.ID, time.Now(),
-		srcIP, dstIP, srcPort, dstPort, protoStr,
-		adjustedBytes, adjustedPackets,
-		srcASN.ASN, dstASN.ASN, srcASN.Name, dstASN.Name, appLabel,
-		flowTypeName, msg.InIf, msg.OutIf, msg.IpTos, msg.TcpFlags,
-		msg.VlanId, nextHop,
-		srcGeo.Country, dstGeo.Country, srcGeo.City, dstGeo.City,
-		srcGeo.Lat, srcGeo.Lon, dstGeo.Lat, dstGeo.Lon,
-	); err != nil {
-		log.Printf("[FlowDecoder] CH insert error: %v", err)
-	}
+	// Enqueue into batch writer (non-blocking)
+	EnqueueFlow(FlowRow{
+		TenantID:   dev.TenantID,
+		DeviceID:   dev.ID,
+		Timestamp:  time.Now(),
+		SrcIP:      srcIP,
+		DstIP:      dstIP,
+		SrcPort:    srcPort,
+		DstPort:    dstPort,
+		Protocol:   protoStr,
+		Bytes:      adjustedBytes,
+		Packets:    adjustedPackets,
+		SrcASN:     srcASN.ASN,
+		DstASN:     dstASN.ASN,
+		SrcASNName: srcASN.Name,
+		DstASNName: dstASN.Name,
+		App:        appLabel,
+		FlowType:   flowTypeName,
+		InIf:       msg.InIf,
+		OutIf:      msg.OutIf,
+		ToS:        msg.IpTos,
+		TCPFlags:   msg.TcpFlags,
+		VlanID:     msg.VlanId,
+		NextHop:    nextHop,
+		SrcCountry: srcGeo.Country,
+		DstCountry: dstGeo.Country,
+		SrcCity:    srcGeo.City,
+		DstCity:    dstGeo.City,
+		SrcLat:     srcGeo.Lat,
+		SrcLon:     srcGeo.Lon,
+		DstLat:     dstGeo.Lat,
+		DstLon:     dstGeo.Lon,
+	})
 
 	return nil
 }

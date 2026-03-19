@@ -1,7 +1,6 @@
 package services
 
 import (
-	"context"
 	"encoding/binary"
 	"fmt"
 	"log"
@@ -145,8 +144,8 @@ func parseNetFlowV5(data []byte, srcAddr string) error {
 
 	log.Printf("[FlowReceiver] ✓ packet from %s — %d flow records", srcAddr, count)
 
-	if database.CH == nil {
-		log.Printf("[FlowReceiver] ⚠ ClickHouse not ready — dropping %d flows from %s", count, srcAddr)
+	if FlowChan == nil {
+		log.Printf("[FlowReceiver] ⚠ Batch writer not ready — dropping %d flows from %s", count, srcAddr)
 		return nil
 	}
 
@@ -168,7 +167,7 @@ func parseNetFlowV5(data []byte, srcAddr string) error {
 		srcPort := binary.BigEndian.Uint16(rec[32:34])
 		dstPort := binary.BigEndian.Uint16(rec[34:36])
 		proto := protoName(rec[38])
-		bytes := binary.BigEndian.Uint32(rec[16:20])
+		bytesVal := binary.BigEndian.Uint32(rec[16:20])
 		pkts := binary.BigEndian.Uint32(rec[12:16])
 
 		// P4 enrichment
@@ -180,23 +179,31 @@ func parseNetFlowV5(data []byte, srcAddr string) error {
 		srcGeo := LookupGeoIP(srcIP)
 		dstGeo := LookupGeoIP(dstIP)
 
-		q := `INSERT INTO metrics_flow
-			(tenant_id, device_id, timestamp,
-			 src_ip, dst_ip, src_port, dst_port, protocol, bytes, packets,
-			 src_asn, dst_asn, src_asn_name, dst_asn_name, app,
-			 src_country, dst_country, src_city, dst_city,
-			 src_lat, src_lon, dst_lat, dst_lon)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-		if err := database.CH.Exec(context.Background(), q,
-			dev.TenantID, dev.ID, time.Now(),
-			srcIP, dstIP, srcPort, dstPort, proto,
-			uint64(bytes), uint64(pkts),
-			srcASN.ASN, dstASN.ASN, srcASN.Name, dstASN.Name, app,
-			srcGeo.Country, dstGeo.Country, srcGeo.City, dstGeo.City,
-			srcGeo.Lat, srcGeo.Lon, dstGeo.Lat, dstGeo.Lon,
-		); err != nil {
-			log.Printf("[FlowReceiver] CH insert error: %v", err)
-		}
+		EnqueueFlow(FlowRow{
+			TenantID:   dev.TenantID,
+			DeviceID:   dev.ID,
+			Timestamp:  time.Now(),
+			SrcIP:      srcIP,
+			DstIP:      dstIP,
+			SrcPort:    srcPort,
+			DstPort:    dstPort,
+			Protocol:   proto,
+			Bytes:      uint64(bytesVal),
+			Packets:    uint64(pkts),
+			SrcASN:     srcASN.ASN,
+			DstASN:     dstASN.ASN,
+			SrcASNName: srcASN.Name,
+			DstASNName: dstASN.Name,
+			App:        app,
+			SrcCountry: srcGeo.Country,
+			DstCountry: dstGeo.Country,
+			SrcCity:    srcGeo.City,
+			DstCity:    dstGeo.City,
+			SrcLat:     srcGeo.Lat,
+			SrcLon:     srcGeo.Lon,
+			DstLat:     dstGeo.Lat,
+			DstLon:     dstGeo.Lon,
+		})
 	}
 	log.Printf("[FlowReceiver] ✓ inserted %d flows from device %s (id=%d)", count, host, dev.ID)
 	return nil
@@ -235,7 +242,7 @@ func startMockFlowReceiver() {
 		protocols := []string{"TCP", "TCP", "TCP", "UDP", "ICMP"}
 
 		for range ticker.C {
-			if database.CH == nil {
+			if FlowChan == nil {
 				continue
 			}
 
@@ -266,27 +273,31 @@ func startMockFlowReceiver() {
 				srcGeo := LookupGeoIP(src)
 				dstGeo := LookupGeoIP(dst)
 
-				q := `INSERT INTO metrics_flow
-					(tenant_id, device_id, timestamp,
-					 src_ip, dst_ip, src_port, dst_port, protocol, bytes, packets,
-					 src_asn, dst_asn, src_asn_name, dst_asn_name, app,
-					 src_country, dst_country, src_city, dst_city,
-					 src_lat, src_lon, dst_lat, dst_lon)
-					VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-				err := database.CH.Exec(context.Background(), q,
-					dev.TenantID, dev.ID, time.Now(),
-					src, dst,
-					uint16(rand.Intn(65000)), dstPort,
-					proto,
-					uint64(rand.Intn(5000000)+500),
-					uint64(rand.Intn(5000)+10),
-					srcASN.ASN, dstASN.ASN, srcASN.Name, dstASN.Name, app,
-					srcGeo.Country, dstGeo.Country, srcGeo.City, dstGeo.City,
-					srcGeo.Lat, srcGeo.Lon, dstGeo.Lat, dstGeo.Lon,
-				)
-				if err != nil {
-					log.Println("[FlowReceiver] Mock insert error:", err)
-				}
+				EnqueueFlow(FlowRow{
+					TenantID:   dev.TenantID,
+					DeviceID:   dev.ID,
+					Timestamp:  time.Now(),
+					SrcIP:      src,
+					DstIP:      dst,
+					SrcPort:    uint16(rand.Intn(65000)),
+					DstPort:    dstPort,
+					Protocol:   proto,
+					Bytes:      uint64(rand.Intn(5000000) + 500),
+					Packets:    uint64(rand.Intn(5000) + 10),
+					SrcASN:     srcASN.ASN,
+					DstASN:     dstASN.ASN,
+					SrcASNName: srcASN.Name,
+					DstASNName: dstASN.Name,
+					App:        app,
+					SrcCountry: srcGeo.Country,
+					DstCountry: dstGeo.Country,
+					SrcCity:    srcGeo.City,
+					DstCity:    dstGeo.City,
+					SrcLat:     srcGeo.Lat,
+					SrcLon:     srcGeo.Lon,
+					DstLat:     dstGeo.Lat,
+					DstLon:     dstGeo.Lon,
+				})
 			}
 		}
 	}()

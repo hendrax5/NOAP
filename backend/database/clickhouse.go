@@ -190,5 +190,106 @@ func initClickHouseSchema(ctx context.Context) {
 	CH.Exec(ctx, "ALTER TABLE metrics_flow ADD COLUMN IF NOT EXISTS dst_lat Float64 DEFAULT 0")
 	CH.Exec(ctx, "ALTER TABLE metrics_flow ADD COLUMN IF NOT EXISTS dst_lon Float64 DEFAULT 0")
 
-	log.Println("ClickHouse schema verified")
+	// ─── Phase 7: TTL + Rollup materialised views ─────────────────────────
+	// 7a. Raw table keeps only 7 days of per-flow data.
+	CH.Exec(ctx, "ALTER TABLE metrics_flow MODIFY TTL timestamp + INTERVAL 7 DAY")
+
+	// 7b. 5-minute rollup — kept for 90 days.
+	CH.Exec(ctx, `CREATE TABLE IF NOT EXISTS metrics_flow_5m (
+		tenant_id    UInt32,
+		device_id    UInt32,
+		ts_5m        DateTime,
+		src_ip       String,
+		dst_ip       String,
+		protocol     String,
+		app          String,
+		src_asn      UInt32,
+		dst_asn      UInt32,
+		src_asn_name String,
+		dst_asn_name String,
+		src_country  String,
+		dst_country  String,
+		bytes        UInt64,
+		packets      UInt64,
+		flow_count   UInt64
+	) ENGINE = SummingMergeTree((bytes, packets, flow_count))
+	ORDER BY (tenant_id, device_id, ts_5m, src_ip, dst_ip, protocol, app)
+	TTL ts_5m + INTERVAL 90 DAY`)
+
+	CH.Exec(ctx, `CREATE MATERIALIZED VIEW IF NOT EXISTS mv_flow_5m
+	TO metrics_flow_5m AS
+	SELECT
+		tenant_id, device_id,
+		toStartOfFiveMinutes(timestamp) AS ts_5m,
+		src_ip, dst_ip, protocol, app,
+		src_asn, dst_asn,
+		any(src_asn_name) AS src_asn_name,
+		any(dst_asn_name) AS dst_asn_name,
+		any(src_country)  AS src_country,
+		any(dst_country)  AS dst_country,
+		sum(bytes)   AS bytes,
+		sum(packets) AS packets,
+		count()      AS flow_count
+	FROM metrics_flow
+	GROUP BY tenant_id, device_id, ts_5m, src_ip, dst_ip, protocol, app, src_asn, dst_asn`)
+
+	// 7c. 1-hour rollup — kept for 2 years.
+	CH.Exec(ctx, `CREATE TABLE IF NOT EXISTS metrics_flow_1h (
+		tenant_id    UInt32,
+		device_id    UInt32,
+		ts_1h        DateTime,
+		src_ip       String,
+		dst_ip       String,
+		protocol     String,
+		app          String,
+		src_asn      UInt32,
+		dst_asn      UInt32,
+		src_asn_name String,
+		dst_asn_name String,
+		src_country  String,
+		dst_country  String,
+		bytes        UInt64,
+		packets      UInt64,
+		flow_count   UInt64
+	) ENGINE = SummingMergeTree((bytes, packets, flow_count))
+	ORDER BY (tenant_id, device_id, ts_1h, src_ip, dst_ip, protocol, app)
+	TTL ts_1h + INTERVAL 730 DAY`)
+
+	CH.Exec(ctx, `CREATE MATERIALIZED VIEW IF NOT EXISTS mv_flow_1h
+	TO metrics_flow_1h AS
+	SELECT
+		tenant_id, device_id,
+		toStartOfHour(timestamp) AS ts_1h,
+		src_ip, dst_ip, protocol, app,
+		src_asn, dst_asn,
+		any(src_asn_name) AS src_asn_name,
+		any(dst_asn_name) AS dst_asn_name,
+		any(src_country)  AS src_country,
+		any(dst_country)  AS dst_country,
+		sum(bytes)   AS bytes,
+		sum(packets) AS packets,
+		count()      AS flow_count
+	FROM metrics_flow
+	GROUP BY tenant_id, device_id, ts_1h, src_ip, dst_ip, protocol, app, src_asn, dst_asn`)
+
+	log.Println("ClickHouse schema verified (incl. flow TTL + rollup views)")
 }
+
+// FlowTable returns the best rollup table name for a given lookback duration.
+//
+//	≤ 6 h  → metrics_flow       (raw, per-flow)
+//	≤ 7 d  → metrics_flow_5m    (5-min rollup)
+//	> 7 d  → metrics_flow_1h    (1-hour rollup)
+//
+// The timestamp column name differs per table; returned as the second value.
+func FlowTable(lookback time.Duration) (table string, tsCol string) {
+	switch {
+	case lookback <= 6*time.Hour:
+		return "metrics_flow", "timestamp"
+	case lookback <= 7*24*time.Hour:
+		return "metrics_flow_5m", "ts_5m"
+	default:
+		return "metrics_flow_1h", "ts_1h"
+	}
+}
+

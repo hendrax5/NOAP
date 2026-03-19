@@ -59,6 +59,7 @@ func main() {
 
 	// Phase 4 flow receivers — GoFlow2 multi-protocol (NetFlow v5/v9, IPFIX, sFlow)
 	services.InitGeoIP() // load MaxMind MMDB databases (no-op if not configured)
+	services.StartFlowBatchWriter() // must start before any flow producer
 	go services.StartGoFlow2Receiver()
 
 	// Phase 5 Topology discovery
