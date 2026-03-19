@@ -27,7 +27,7 @@ var allowedDimensions = map[string]bool{
 	"vlan_id": true, "tos": true,
 }
 
-// time-range strings → ClickHouse intervals
+// time-range strings → ClickHouse intervals + Go durations
 var timeRangeMap = map[string]string{
 	"5m":  "5 MINUTE",
 	"15m": "15 MINUTE",
@@ -35,16 +35,47 @@ var timeRangeMap = map[string]string{
 	"6h":  "6 HOUR",
 	"24h": "24 HOUR",
 	"7d":  "7 DAY",
+	"30d": "30 DAY",
+	"90d": "90 DAY",
 }
 
-// bucket size per time range
-var bucketMap = map[string]string{
-	"5m":  "toStartOfMinute(timestamp)",
-	"15m": "toStartOfMinute(timestamp)",
-	"1h":  "toStartOfFiveMinutes(timestamp)",
-	"6h":  "toStartOfFiveMinutes(timestamp)",
-	"24h": "toStartOfFifteenMinutes(timestamp)",
-	"7d":  "toStartOfHour(timestamp)",
+// parseLookback converts our time-range key to a Go duration for FlowTable.
+func parseLookback(tr string) time.Duration {
+	switch tr {
+	case "5m":
+		return 5 * time.Minute
+	case "15m":
+		return 15 * time.Minute
+	case "1h":
+		return time.Hour
+	case "6h":
+		return 6 * time.Hour
+	case "24h":
+		return 24 * time.Hour
+	case "7d":
+		return 7 * 24 * time.Hour
+	case "30d":
+		return 30 * 24 * time.Hour
+	case "90d":
+		return 90 * 24 * time.Hour
+	default:
+		return time.Hour
+	}
+}
+
+// bucketExpr returns the ClickHouse bucket expression for the given time
+// range and timestamp column (which differs per rollup table).
+func bucketExpr(tr, tsCol string) string {
+	switch tr {
+	case "5m", "15m":
+		return fmt.Sprintf("toStartOfMinute(%s)", tsCol)
+	case "1h", "6h":
+		return fmt.Sprintf("toStartOfFiveMinutes(%s)", tsCol)
+	case "24h":
+		return fmt.Sprintf("toStartOfFifteenMinutes(%s)", tsCol)
+	default: // 7d, 30d, 90d
+		return fmt.Sprintf("toStartOfHour(%s)", tsCol)
+	}
 }
 
 // ── Request body ────────────────────────────────────────────────────────
@@ -144,6 +175,9 @@ func FlowQuery(c *fiber.Ctx) error {
 
 	// ── Real ClickHouse queries ──
 	interval := timeRangeMap[req.TimeRange]
+	lookback := parseLookback(req.TimeRange)
+	table, tsCol := database.FlowTable(lookback)
+
 	dimCols := strings.Join(req.Dimensions, ", ")
 	filterClause := ""
 	if safeFilter != "" {
@@ -153,12 +187,12 @@ func FlowQuery(c *fiber.Ctx) error {
 	// 1) aggregated rows — top N
 	rowQuery := fmt.Sprintf(`
 		SELECT %s, sum(%s) as total
-		FROM metrics_flow
-		WHERE tenant_id = ? AND timestamp >= now() - INTERVAL %s%s
+		FROM %s
+		WHERE tenant_id = ? AND %s >= now() - INTERVAL %s%s
 		GROUP BY %s
 		ORDER BY total DESC
 		LIMIT %d
-	`, dimCols, req.Metric, interval, filterClause, dimCols, req.Limit)
+	`, dimCols, req.Metric, table, tsCol, interval, filterClause, dimCols, req.Limit)
 
 	rows, err := database.CH.Query(c.Context(), rowQuery, tenantID)
 	if err != nil {
@@ -205,14 +239,14 @@ func FlowQuery(c *fiber.Ctx) error {
 	}
 
 	// 2) time series — bucketed, only for top-N keys
-	bucketExpr := bucketMap[req.TimeRange]
+	bExpr := bucketExpr(req.TimeRange, tsCol)
 	tsQuery := fmt.Sprintf(`
 		SELECT %s AS bucket, %s, sum(%s) as total
-		FROM metrics_flow
-		WHERE tenant_id = ? AND timestamp >= now() - INTERVAL %s%s
+		FROM %s
+		WHERE tenant_id = ? AND %s >= now() - INTERVAL %s%s
 		GROUP BY bucket, %s
 		ORDER BY bucket ASC, total DESC
-	`, bucketExpr, dimCols, req.Metric, interval, filterClause, dimCols)
+	`, bExpr, dimCols, req.Metric, table, tsCol, interval, filterClause, dimCols)
 
 	tsRows, err := database.CH.Query(c.Context(), tsQuery, tenantID)
 	if err != nil {

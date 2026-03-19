@@ -1,12 +1,38 @@
 package handlers
 
 import (
+	"fmt"
 	"log"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/hendrax5/noap/database"
 	"github.com/hendrax5/noap/middleware"
 )
+
+// parseRange reads the ?range= query param and returns (interval string, lookback duration).
+// Defaults to 1 HOUR.
+func parseRange(c *fiber.Ctx) (string, time.Duration) {
+	r := c.Query("range", "1h")
+	switch r {
+	case "5m":
+		return "5 MINUTE", 5 * time.Minute
+	case "15m":
+		return "15 MINUTE", 15 * time.Minute
+	case "6h":
+		return "6 HOUR", 6 * time.Hour
+	case "24h":
+		return "24 HOUR", 24 * time.Hour
+	case "7d":
+		return "7 DAY", 7 * 24 * time.Hour
+	case "30d":
+		return "30 DAY", 30 * 24 * time.Hour
+	case "90d":
+		return "90 DAY", 90 * 24 * time.Hour
+	default:
+		return "1 HOUR", time.Hour
+	}
+}
 
 // ────────────────────────────────────────────────────────────────────────────
 // GetTopTalkers — enriched with ASN + app columns (P4)
@@ -29,16 +55,19 @@ func GetTopTalkers(c *fiber.Ctx) error {
 		})
 	}
 
-	query := `
+	interval, lookback := parseRange(c)
+	table, tsCol := database.FlowTable(lookback)
+
+	query := fmt.Sprintf(`
 		SELECT src_ip, dst_ip, any(protocol) as protocol,
 		       any(app) as app, any(dst_asn_name) as dst_asn_name,
 		       sum(bytes) as total_bytes
-		FROM metrics_flow
-		WHERE tenant_id = ? AND timestamp >= now() - INTERVAL 1 HOUR
+		FROM %s
+		WHERE tenant_id = ? AND %s >= now() - INTERVAL %s
 		GROUP BY src_ip, dst_ip
 		ORDER BY total_bytes DESC
 		LIMIT 10
-	`
+	`, table, tsCol, interval)
 	rows, err := database.CH.Query(c.Context(), query, tenantID)
 	if err != nil {
 		log.Println("Error querying top talkers:", err)
@@ -82,17 +111,20 @@ func GetFlowBandwidth(c *fiber.Ctx) error {
 		})
 	}
 
-	query := `
+	interval, lookback := parseRange(c)
+	table, tsCol := database.FlowTable(lookback)
+
+	query := fmt.Sprintf(`
 		SELECT
 			sum(bytes) / 1073741824.0               as total_gb,
 			sumIf(bytes, protocol='TCP')  / sum(bytes) * 100 as tcp_pct,
 			sumIf(bytes, protocol='UDP')  / sum(bytes) * 100 as udp_pct,
 			sumIf(bytes, protocol='ICMP') / sum(bytes) * 100 as icmp_pct,
 			uniqExact(src_ip, dst_ip, src_port, dst_port) as active_flows
-		FROM metrics_flow
-		WHERE tenant_id = ? AND timestamp >= now() - INTERVAL 1 HOUR
+		FROM %s
+		WHERE tenant_id = ? AND %s >= now() - INTERVAL %s
 		HAVING sum(bytes) > 0
-	`
+	`, table, tsCol, interval)
 	var total float64
 	var tcp, udp, icmp float64
 	var activeFlows uint64
@@ -133,16 +165,19 @@ func GetFlowTimeSeries(c *fiber.Ctx) error {
 		return c.JSON(mock)
 	}
 
-	query := `
+	interval, lookback := parseRange(c)
+	table, tsCol := database.FlowTable(lookback)
+
+	query := fmt.Sprintf(`
 		SELECT
-			toStartOfFiveMinutes(timestamp) as bucket,
+			toStartOfFiveMinutes(%s) as bucket,
 			sum(bytes) / 300.0 * 8 as in_bps,
 			sum(bytes) / 300.0 * 8 * 0.45 as out_bps
-		FROM metrics_flow
-		WHERE tenant_id = ? AND timestamp >= now() - INTERVAL 1 HOUR
+		FROM %s
+		WHERE tenant_id = ? AND %s >= now() - INTERVAL %s
 		GROUP BY bucket
 		ORDER BY bucket ASC
-	`
+	`, tsCol, table, tsCol, interval)
 	rows, err := database.CH.Query(c.Context(), query, tenantID)
 	if err != nil {
 		log.Println("Error querying flow timeseries:", err)
@@ -191,15 +226,18 @@ func GetTopApplications(c *fiber.Ctx) error {
 		})
 	}
 
-	query := `
+	interval, lookback := parseRange(c)
+	table, tsCol := database.FlowTable(lookback)
+
+	query := fmt.Sprintf(`
 		SELECT app, sum(bytes) as total_bytes
-		FROM metrics_flow
-		WHERE tenant_id = ? AND timestamp >= now() - INTERVAL 1 HOUR
+		FROM %s
+		WHERE tenant_id = ? AND %s >= now() - INTERVAL %s
 		  AND app != ''
 		GROUP BY app
 		ORDER BY total_bytes DESC
 		LIMIT 10
-	`
+	`, table, tsCol, interval)
 	rows, err := database.CH.Query(c.Context(), query, tenantID)
 	if err != nil {
 		log.Println("Error querying top apps:", err)
@@ -245,14 +283,17 @@ func GetTopASNs(c *fiber.Ctx) error {
 		})
 	}
 
-	query := `
+	interval, lookback := parseRange(c)
+	table, tsCol := database.FlowTable(lookback)
+
+	query := fmt.Sprintf(`
 		SELECT dst_asn as asn, any(dst_asn_name) as asn_name, sum(bytes) as total_bytes
-		FROM metrics_flow
-		WHERE tenant_id = ? AND timestamp >= now() - INTERVAL 1 HOUR
+		FROM %s
+		WHERE tenant_id = ? AND %s >= now() - INTERVAL %s
 		GROUP BY dst_asn
 		ORDER BY total_bytes DESC
 		LIMIT 8
-	`
+	`, table, tsCol, interval)
 	rows, err := database.CH.Query(c.Context(), query, tenantID)
 	if err != nil {
 		log.Println("Error querying top ASNs:", err)
@@ -298,19 +339,22 @@ func GetGeoFlows(c *fiber.Ctx) error {
 		})
 	}
 
-	query := `
+	interval, lookback := parseRange(c)
+	table, tsCol := database.FlowTable(lookback)
+
+	query := fmt.Sprintf(`
 		SELECT src_country, dst_country,
 		       any(src_lat) as src_lat, any(src_lon) as src_lon,
 		       any(dst_lat) as dst_lat, any(dst_lon) as dst_lon,
 		       sum(bytes) as total_bytes
-		FROM metrics_flow
-		WHERE tenant_id = ? AND timestamp >= now() - INTERVAL 1 HOUR
+		FROM %s
+		WHERE tenant_id = ? AND %s >= now() - INTERVAL %s
 		  AND src_country != '' AND dst_country != ''
 		  AND src_country != dst_country
 		GROUP BY src_country, dst_country
 		ORDER BY total_bytes DESC
 		LIMIT 15
-	`
+	`, table, tsCol, interval)
 	rows, err := database.CH.Query(c.Context(), query, tenantID)
 	if err != nil {
 		log.Println("Error querying geo flows:", err)
@@ -369,15 +413,18 @@ func GetSankeyFlows(c *fiber.Ctx) error {
 		})
 	}
 
+	interval, lookback := parseRange(c)
+	table, tsCol := database.FlowTable(lookback)
+
 	// Left-to-middle links: src_ip → protocol
-	q1 := `
+	q1 := fmt.Sprintf(`
 		SELECT src_ip, protocol, sum(bytes) as total_bytes
-		FROM metrics_flow
-		WHERE tenant_id = ? AND timestamp >= now() - INTERVAL 1 HOUR
+		FROM %s
+		WHERE tenant_id = ? AND %s >= now() - INTERVAL %s
 		GROUP BY src_ip, protocol
 		ORDER BY total_bytes DESC
 		LIMIT 15
-	`
+	`, table, tsCol, interval)
 	rows1, err := database.CH.Query(c.Context(), q1, tenantID)
 	if err != nil {
 		log.Println("Error querying sankey src→proto:", err)
@@ -400,15 +447,15 @@ func GetSankeyFlows(c *fiber.Ctx) error {
 	}
 
 	// Middle-to-right links: protocol → app
-	q2 := `
+	q2 := fmt.Sprintf(`
 		SELECT protocol, app, sum(bytes) as total_bytes
-		FROM metrics_flow
-		WHERE tenant_id = ? AND timestamp >= now() - INTERVAL 1 HOUR
+		FROM %s
+		WHERE tenant_id = ? AND %s >= now() - INTERVAL %s
 		  AND app != ''
 		GROUP BY protocol, app
 		ORDER BY total_bytes DESC
 		LIMIT 15
-	`
+	`, table, tsCol, interval)
 	rows2, err := database.CH.Query(c.Context(), q2, tenantID)
 	if err != nil {
 		log.Println("Error querying sankey proto→app:", err)
