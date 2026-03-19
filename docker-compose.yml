@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: noap-postgres
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: noap
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    container_name: noap-clickhouse
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    environment:
+      CLICKHOUSE_DB: noap
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: password
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+    volumes:
+      - chdata:/var/lib/clickhouse
+    restart: unless-stopped
+
+  nats:
+    image: nats:latest
+    container_name: noap-nats
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    command: ["-m", "8222"]
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    container_name: noap-backend
+    ports:
+      - "4000:4000"
+      - "2055:2055/udp"       # NetFlow v5 listener
+    depends_on:
+      - postgres
+      - nats
+    environment:
+      - DB_HOST=postgres
+      - DB_USER=user
+      - DB_PASSWORD=password
+      - DB_NAME=noap
+      - DB_PORT=5432
+      - CH_HOST=clickhouse
+      - NETFLOW_PORT=2055
+      # IMPORTANT: override JWT_SECRET with a strong random value in production
+      - JWT_SECRET=${JWT_SECRET:-noap-dev-secret-change-in-prod}
+      - BOOTSTRAP_KEY=${BOOTSTRAP_KEY:-noap-bootstrap-key}
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    container_name: noap-frontend
+    ports:
+      - "3003:3000"
+    depends_on:
+      - backend
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:4000/api/v1
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  chdata:

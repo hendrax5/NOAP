@@ -1,0 +1,72 @@
+time="2026-03-18T16:51:23+07:00" level=warning msg="C:\\Users\\hendr\\OneDrive\\Documents\\Antigravity\\NOAP\\docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Image noap-backend Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 581B done
+#1 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile
+#2 transferring dockerfile: 254B done
+#2 DONE 0.1s
+
+#3 [internal] load metadata for docker.io/library/golang:1.24-alpine
+#3 DONE 0.1s
+
+#4 [internal] load .dockerignore
+#4 transferring context: 2B done
+#4 DONE 0.1s
+
+#5 [internal] load build context
+#5 DONE 0.0s
+
+#6 [1/6] FROM docker.io/library/golang:1.24-alpine@sha256:8bee1901f1e530bfb4a7850aa7a479d17ae3a18beb6e09064ed54cfd245b7191
+#6 resolve docker.io/library/golang:1.24-alpine@sha256:8bee1901f1e530bfb4a7850aa7a479d17ae3a18beb6e09064ed54cfd245b7191
+#6 resolve docker.io/library/golang:1.24-alpine@sha256:8bee1901f1e530bfb4a7850aa7a479d17ae3a18beb6e09064ed54cfd245b7191 0.2s done
+#6 DONE 0.2s
+
+#5 [internal] load build context
+#5 transferring context: 1.30kB done
+#5 DONE 0.1s
+
+#7 [2/6] WORKDIR /app
+#7 CACHED
+
+#8 [3/6] COPY go.mod ./
+#8 CACHED
+
+#9 [4/6] COPY . .
+#9 CACHED
+
+#10 [5/6] RUN go mod tidy
+#10 CACHED
+
+#11 [6/6] RUN go build -o /noap-api
+#11 11.82 # github.com/hendrax5/noap/handlers
+#11 11.82 handlers/device.go:3:2: syntax error: non-declaration statement outside function body
+#11 ERROR: process "/bin/sh -c go build -o /noap-api" did not complete successfully: exit code: 1
+------
+ > [6/6] RUN go build -o /noap-api:
+11.82 # github.com/hendrax5/noap/handlers
+11.82 handlers/device.go:3:2: syntax error: non-declaration statement outside function body
+------
+Dockerfile:10
+
+--------------------
+
+   8 |     COPY . .
+
+   9 |     RUN go mod tidy
+
+  10 | >>> RUN go build -o /noap-api
+
+  11 |     
+
+  12 |     EXPOSE 4000
+
+--------------------
+
+failed to solve: process "/bin/sh -c go build -o /noap-api" did not complete successfully: exit code: 1
+
+
+
+View build details: docker-desktop://dashboard/build/default/default/p7jck8g0fobwaxp98lr0heq83
+

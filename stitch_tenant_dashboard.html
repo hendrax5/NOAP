@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Multi-tenant NMS Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#136dec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101822",
+                    },
+                    fontFamily: {
+                        "display": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 font-display">
+<div class="flex h-screen overflow-hidden">
+<!-- Sidebar Navigation -->
+<aside class="w-64 flex-shrink-0 border-r border-primary/10 bg-white dark:bg-background-dark/50 backdrop-blur-xl">
+<div class="flex flex-col h-full">
+<div class="p-6 flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-primary flex items-center justify-center text-white">
+<span class="material-symbols-outlined">hub</span>
+</div>
+<div>
+<h1 class="font-bold text-lg leading-tight">NetPulse</h1>
+<p class="text-xs text-slate-500 dark:text-slate-400">Multi-tenant NMS</p>
+</div>
+</div>
+<nav class="flex-1 px-4 space-y-2 mt-4">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg bg-primary text-white" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-medium">Overview</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-primary/10 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">groups</span>
+<span class="font-medium">Tenants</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-primary/10 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">router</span>
+<span class="font-medium">Devices</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-primary/10 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">notification_important</span>
+<span class="font-medium">Alerts</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-primary/10 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">monitoring</span>
+<span class="font-medium">Reports</span>
+</a>
+</nav>
+<div class="p-4 border-t border-primary/10">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-primary/10 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-medium">Settings</span>
+</a>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col overflow-hidden">
+<!-- Top Navigation Bar -->
+<header class="h-16 flex items-center justify-between px-8 border-b border-primary/10 bg-white/50 dark:bg-background-dark/50 backdrop-blur-md">
+<div class="flex items-center flex-1 max-w-xl">
+<div class="relative w-full">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">search</span>
+<input class="w-full bg-slate-100 dark:bg-slate-800/50 border-none rounded-lg py-2 pl-10 pr-4 focus:ring-2 focus:ring-primary text-sm transition-all" placeholder="Search tenants, devices, or logs..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors relative">
+<span class="material-symbols-outlined text-slate-600 dark:text-slate-400">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-background-dark"></span>
+</button>
+<div class="h-8 w-[1px] bg-primary/10 mx-2"></div>
+<div class="flex items-center gap-3 cursor-pointer group">
+<div class="text-right">
+<p class="text-sm font-semibold leading-tight">Alex Rivet</p>
+<p class="text-xs text-slate-500 dark:text-slate-400">Admin</p>
+</div>
+<img alt="User Profile" class="w-10 h-10 rounded-full border-2 border-primary/20 group-hover:border-primary transition-colors" data-alt="Close up portrait of a professional male" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBFYEgT1YgXSdHPG2HMECwWyMQcczPYtipKMVLTzO4sBnXBzeFa284tJ1xJL2dgtF_Oa6jtF3LjXP019XCK209_GLJGhDDMHcTz1ch73nC24GxCcU5sJa4zlyiAvQe8OTiC74Nwhe_Zvbs6Y8kecm1P5kCU8i8APwLvzKrG2AOYGYQt2N7oEnVxjsiyFxxHO_yoeA8Jhkifm02v6msKOz5VwvicNl8OMIpGEseRVRMxX583uCU7J3QxBsG33SB0OaKqUyqKzaAxb4FZ"/>
+</div>
+</div>
+</header>
+<!-- Dashboard Content -->
+<div class="flex-1 overflow-y-auto p-8 space-y-8">
+<!-- Page Title -->
+<div>
+<h2 class="text-2xl font-bold">Tenant Overview</h2>
+<p class="text-slate-500 dark:text-slate-400">Real-time performance metrics across all infrastructure.</p>
+</div>
+<!-- Key Metrics Cards -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+<div class="bg-white dark:bg-slate-800/40 p-6 rounded-xl border border-primary/10 shadow-sm">
+<div class="flex items-center justify-between mb-4">
+<span class="text-slate-500 dark:text-slate-400 font-medium text-sm">Total Tenants</span>
+<div class="p-2 bg-primary/10 rounded-lg text-primary">
+<span class="material-symbols-outlined">apartment</span>
+</div>
+</div>
+<div class="flex items-end gap-2">
+<h3 class="text-3xl font-bold">128</h3>
+<span class="text-emerald-500 text-sm font-medium mb-1 flex items-center">
+<span class="material-symbols-outlined text-sm">trending_up</span> 12%
+                            </span>
+</div>
+</div>
+<div class="bg-white dark:bg-slate-800/40 p-6 rounded-xl border border-primary/10 shadow-sm">
+<div class="flex items-center justify-between mb-4">
+<span class="text-slate-500 dark:text-slate-400 font-medium text-sm">Active Devices</span>
+<div class="p-2 bg-primary/10 rounded-lg text-primary">
+<span class="material-symbols-outlined">dns</span>
+</div>
+</div>
+<div class="flex items-end gap-2">
+<h3 class="text-3xl font-bold">4,290</h3>
+<span class="text-emerald-500 text-sm font-medium mb-1 flex items-center">
+<span class="material-symbols-outlined text-sm">trending_up</span> 4%
+                            </span>
+</div>
+</div>
+<div class="bg-white dark:bg-slate-800/40 p-6 rounded-xl border border-primary/10 shadow-sm">
+<div class="flex items-center justify-between mb-4">
+<span class="text-slate-500 dark:text-slate-400 font-medium text-sm">Critical Alerts</span>
+<div class="p-2 bg-red-500/10 rounded-lg text-red-500">
+<span class="material-symbols-outlined">warning</span>
+</div>
+</div>
+<div class="flex items-end gap-2">
+<h3 class="text-3xl font-bold">12</h3>
+<span class="text-red-500 text-sm font-medium mb-1 flex items-center">
+<span class="material-symbols-outlined text-sm">trending_up</span> 2
+                            </span>
+</div>
+</div>
+<div class="bg-white dark:bg-slate-800/40 p-6 rounded-xl border border-primary/10 shadow-sm">
+<div class="flex items-center justify-between mb-4">
+<span class="text-slate-500 dark:text-slate-400 font-medium text-sm">Total Bandwidth</span>
+<div class="p-2 bg-primary/10 rounded-lg text-primary">
+<span class="material-symbols-outlined">speed</span>
+</div>
+</div>
+<div class="flex items-end gap-2">
+<h3 class="text-3xl font-bold">1.2 TB/s</h3>
+<span class="text-emerald-500 text-sm font-medium mb-1 flex items-center">
+<span class="material-symbols-outlined text-sm">trending_down</span> 8%
+                            </span>
+</div>
+</div>
+</div>
+<!-- Charts and Lists -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+<!-- Resource Usage Chart -->
+<div class="lg:col-span-2 bg-white dark:bg-slate-800/40 p-6 rounded-xl border border-primary/10">
+<div class="flex items-center justify-between mb-6">
+<h3 class="font-bold text-lg">Resource Usage Trend</h3>
+<div class="flex gap-2">
+<button class="px-3 py-1 text-xs rounded-full bg-primary text-white">CPU</button>
+<button class="px-3 py-1 text-xs rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300">Memory</button>
+<button class="px-3 py-1 text-xs rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300">Traffic</button>
+</div>
+</div>
+<div class="h-64 flex items-end justify-between gap-2 px-2">
+<!-- Visual placeholder for a line/area chart -->
+<div class="flex-1 bg-primary/20 rounded-t-lg transition-all hover:bg-primary/40" style="height: 60%;"></div>
+<div class="flex-1 bg-primary/20 rounded-t-lg transition-all hover:bg-primary/40" style="height: 75%;"></div>
+<div class="flex-1 bg-primary/20 rounded-t-lg transition-all hover:bg-primary/40" style="height: 45%;"></div>
+<div class="flex-1 bg-primary/20 rounded-t-lg transition-all hover:bg-primary/40" style="height: 80%;"></div>
+<div class="flex-1 bg-primary/20 rounded-t-lg transition-all hover:bg-primary/40" style="height: 95%;"></div>
+<div class="flex-1 bg-primary/20 rounded-t-lg transition-all hover:bg-primary/40" style="height: 70%;"></div>
+<div class="flex-1 bg-primary/20 rounded-t-lg transition-all hover:bg-primary/40" style="height: 85%;"></div>
+<div class="flex-1 bg-primary/20 rounded-t-lg transition-all hover:bg-primary/40" style="height: 65%;"></div>
+<div class="flex-1 bg-primary/20 rounded-t-lg transition-all hover:bg-primary/40" style="height: 90%;"></div>
+<div class="flex-1 bg-primary/20 rounded-t-lg transition-all hover:bg-primary/40" style="height: 75%;"></div>
+<div class="flex-1 bg-primary/20 rounded-t-lg transition-all hover:bg-primary/40" style="height: 60%;"></div>
+<div class="flex-1 bg-primary/20 rounded-t-lg transition-all hover:bg-primary/40" style="height: 40%;"></div>
+</div>
+<div class="flex justify-between mt-4 text-xs text-slate-500 px-2">
+<span>00:00</span>
+<span>06:00</span>
+<span>12:00</span>
+<span>18:00</span>
+<span>23:59</span>
+</div>
+</div>
+<!-- Recent Network Alerts -->
+<div class="bg-white dark:bg-slate-800/40 p-6 rounded-xl border border-primary/10">
+<div class="flex items-center justify-between mb-6">
+<h3 class="font-bold text-lg">Recent Alerts</h3>
+<a class="text-primary text-xs font-semibold hover:underline" href="#">View All</a>
+</div>
+<div class="space-y-4">
+<div class="flex gap-4 p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors">
+<div class="w-1.5 h-auto bg-red-500 rounded-full flex-shrink-0"></div>
+<div class="flex-1">
+<p class="text-sm font-semibold">Nexus Ltd - Core Switch Offline</p>
+<p class="text-xs text-slate-500 mt-1">2 mins ago • Critical</p>
+</div>
+</div>
+<div class="flex gap-4 p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors">
+<div class="w-1.5 h-auto bg-amber-500 rounded-full flex-shrink-0"></div>
+<div class="flex-1">
+<p class="text-sm font-semibold">Acme Corp - High CPU Usage</p>
+<p class="text-xs text-slate-500 mt-1">15 mins ago • Warning</p>
+</div>
+</div>
+<div class="flex gap-4 p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors">
+<div class="w-1.5 h-auto bg-amber-500 rounded-full flex-shrink-0"></div>
+<div class="flex-1">
+<p class="text-sm font-semibold">Global Tech - BGP Flap Detected</p>
+<p class="text-xs text-slate-500 mt-1">45 mins ago • Warning</p>
+</div>
+</div>
+<div class="flex gap-4 p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors">
+<div class="w-1.5 h-auto bg-primary rounded-full flex-shrink-0"></div>
+<div class="flex-1">
+<p class="text-sm font-semibold">System - Daily Backup Completed</p>
+<p class="text-xs text-slate-500 mt-1">1 hour ago • Info</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Tenant Health Status Table -->
+<div class="bg-white dark:bg-slate-800/40 rounded-xl border border-primary/10 overflow-hidden shadow-sm">
+<div class="p-6 border-b border-primary/10 flex items-center justify-between">
+<h3 class="font-bold text-lg">Tenant Health Status</h3>
+<button class="flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary rounded-lg text-sm font-semibold hover:bg-primary/20 transition-colors">
+<span class="material-symbols-outlined text-lg">filter_list</span>
+                            Filter
+                        </button>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left">
+<thead>
+<tr class="bg-slate-50 dark:bg-slate-900/50 text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider">
+<th class="px-6 py-4 font-semibold">Tenant Name</th>
+<th class="px-6 py-4 font-semibold">Status</th>
+<th class="px-6 py-4 font-semibold text-center">Devices</th>
+<th class="px-6 py-4 font-semibold text-center">Uptime</th>
+<th class="px-6 py-4 font-semibold text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-primary/10">
+<tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary/20 flex items-center justify-center text-primary font-bold text-xs">AC</div>
+<span class="font-semibold text-sm">Acme Corp</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                                            Healthy
+                                        </span>
+</td>
+<td class="px-6 py-4 text-center text-sm">850</td>
+<td class="px-6 py-4 text-center text-sm">99.99%</td>
+<td class="px-6 py-4 text-right">
+<button class="text-slate-400 hover:text-primary"><span class="material-symbols-outlined">more_vert</span></button>
+</td>
+</tr>
+<tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary/20 flex items-center justify-center text-primary font-bold text-xs">GT</div>
+<span class="font-semibold text-sm">Global Tech</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                                            Warning
+                                        </span>
+</td>
+<td class="px-6 py-4 text-center text-sm">1,200</td>
+<td class="px-6 py-4 text-center text-sm">98.50%</td>
+<td class="px-6 py-4 text-right">
+<button class="text-slate-400 hover:text-primary"><span class="material-symbols-outlined">more_vert</span></button>
+</td>
+</tr>
+<tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary/20 flex items-center justify-center text-primary font-bold text-xs">NL</div>
+<span class="font-semibold text-sm">Nexus Ltd</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 dark:bg-red-500/10 text-red-600 dark:text-red-400">
+                                            Critical
+                                        </span>
+</td>
+<td class="px-6 py-4 text-center text-sm">450</td>
+<td class="px-6 py-4 text-center text-sm">92.10%</td>
+<td class="px-6 py-4 text-right">
+<button class="text-slate-400 hover:text-primary"><span class="material-symbols-outlined">more_vert</span></button>
+</td>
+</tr>
+<tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary/20 flex items-center justify-center text-primary font-bold text-xs">OS</div>
+<span class="font-semibold text-sm">Omni Systems</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                                            Healthy
+                                        </span>
+</td>
+<td class="px-6 py-4 text-center text-sm">1,790</td>
+<td class="px-6 py-4 text-center text-sm">99.95%</td>
+<td class="px-6 py-4 text-right">
+<button class="text-slate-400 hover:text-primary"><span class="material-symbols-outlined">more_vert</span></button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

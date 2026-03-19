@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Synthetic Probes Dashboard</title>
+<!-- Tailwind CSS v3 with Plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Inter Font -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            tactical: {
+              bg: '#102216',
+              accent: '#25f46a',
+              card: '#162b1e',
+              border: '#1f3d2a',
+              text: '#e2e8f0',
+              muted: '#64748b'
+            }
+          },
+          animation: {
+            'pulse-fast': 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+          }
+        }
+      }
+    }
+  </script>
+<style data-purpose="custom-layout">
+    body {
+      background-color: #102216;
+      color: #e2e8f0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Custom scrollbar for data-heavy sections */
+    ::-webkit-scrollbar {
+      width: 4px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #102216;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #25f46a55;
+      border-radius: 10px;
+    }
+
+    /* High-tech grid background for charts */
+    .grid-bg {
+      background-image: 
+        linear-gradient(to right, rgba(37, 244, 106, 0.05) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(37, 244, 106, 0.05) 1px, transparent 1px);
+      background-size: 20px 20px;
+    }
+
+    /* Glow effect for neon elements */
+    .neon-glow {
+      box-shadow: 0 0 10px rgba(37, 244, 106, 0.3);
+    }
+    
+    .text-neon {
+      text-shadow: 0 0 8px rgba(37, 244, 106, 0.6);
+    }
+  </style>
+</head>
+<body class="font-sans antialiased pb-10">
+<!-- BEGIN: MainHeader -->
+<header class="sticky top-0 z-50 bg-tactical-bg/90 backdrop-blur-md border-b border-tactical-border px-4 py-4 flex justify-between items-center">
+<div class="flex items-center gap-2">
+<div class="w-2 h-6 bg-tactical-accent neon-glow"></div>
+<h1 class="text-lg font-bold tracking-tight uppercase">Synthetic Probes</h1>
+</div>
+<div class="flex items-center gap-2 px-3 py-1 bg-tactical-accent/10 border border-tactical-accent/30 rounded-full">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-tactical-accent opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-tactical-accent"></span>
+</span>
+<span class="text-[10px] font-bold text-tactical-accent tracking-widest uppercase">Live</span>
+</div>
+</header>
+<!-- END: MainHeader -->
+<main class="p-4 space-y-6">
+<!-- BEGIN: QuickStats -->
+<section class="grid grid-cols-3 gap-3" data-purpose="metric-overview">
+<!-- Latency Card -->
+<div class="bg-tactical-card border border-tactical-border p-3 rounded-sm flex flex-col justify-between">
+<span class="text-[9px] uppercase font-semibold text-tactical-muted tracking-wider">Avg Latency</span>
+<div class="mt-2">
+<span class="text-xl font-bold text-tactical-accent text-neon">42</span>
+<span class="text-[10px] text-tactical-muted ml-0.5">ms</span>
+</div>
+</div>
+<!-- Packet Loss Card -->
+<div class="bg-tactical-card border border-tactical-border p-3 rounded-sm flex flex-col justify-between">
+<span class="text-[9px] uppercase font-semibold text-tactical-muted tracking-wider">Loss</span>
+<div class="mt-2 text-tactical-text">
+<span class="text-xl font-bold">0.02</span>
+<span class="text-[10px] text-tactical-muted ml-0.5">%</span>
+</div>
+</div>
+<!-- Jitter Card -->
+<div class="bg-tactical-card border border-tactical-border p-3 rounded-sm flex flex-col justify-between">
+<span class="text-[9px] uppercase font-semibold text-tactical-muted tracking-wider">Jitter</span>
+<div class="mt-2 text-tactical-text">
+<span class="text-xl font-bold">1.2</span>
+<span class="text-[10px] text-tactical-muted ml-0.5">ms</span>
+</div>
+</div>
+</section>
+<!-- END: QuickStats -->
+<!-- BEGIN: LatencyCharts -->
+<section class="space-y-4" data-purpose="performance-visualization">
+<h2 class="text-[11px] font-bold text-tactical-muted uppercase tracking-widest border-l-2 border-tactical-accent pl-2">Regional Latency Trends</h2>
+<!-- Chart Group -->
+<div class="space-y-3">
+<!-- AWS Chart -->
+<div class="bg-tactical-card border border-tactical-border rounded-sm overflow-hidden">
+<div class="px-3 py-2 border-b border-tactical-border flex justify-between items-center bg-black/20">
+<span class="text-[10px] font-medium tracking-wide">AWS US-East-1</span>
+<span class="text-[10px] text-tactical-accent font-mono">38ms</span>
+</div>
+<div class="h-24 grid-bg relative">
+<canvas class="w-full h-full" id="chart-aws"></canvas>
+</div>
+</div>
+<!-- Azure Chart -->
+<div class="bg-tactical-card border border-tactical-border rounded-sm overflow-hidden">
+<div class="px-3 py-2 border-b border-tactical-border flex justify-between items-center bg-black/20">
+<span class="text-[10px] font-medium tracking-wide">Azure West Europe</span>
+<span class="text-[10px] text-tactical-accent font-mono">52ms</span>
+</div>
+<div class="h-24 grid-bg relative">
+<canvas class="w-full h-full" id="chart-azure"></canvas>
+</div>
+</div>
+<!-- GCP Chart -->
+<div class="bg-tactical-card border border-tactical-border rounded-sm overflow-hidden">
+<div class="px-3 py-2 border-b border-tactical-border flex justify-between items-center bg-black/20">
+<span class="text-[10px] font-medium tracking-wide">GCP Asia-Northeast</span>
+<span class="text-[10px] text-tactical-accent font-mono">112ms</span>
+</div>
+<div class="h-24 grid-bg relative">
+<canvas class="w-full h-full" id="chart-gcp"></canvas>
+</div>
+</div>
+</div>
+</section>
+<!-- END: LatencyCharts -->
+<!-- BEGIN: RecentProbesTable -->
+<section class="space-y-3" data-purpose="probe-log-table">
+<div class="flex justify-between items-end px-1">
+<h2 class="text-[11px] font-bold text-tactical-muted uppercase tracking-widest border-l-2 border-tactical-accent pl-2">Recent Probes</h2>
+<span class="text-[9px] text-tactical-muted">showing last 20 events</span>
+</div>
+<div class="overflow-hidden border border-tactical-border rounded-sm">
+<table class="w-full text-left text-[11px]">
+<thead class="bg-tactical-border/30 text-tactical-muted uppercase tracking-wider font-bold">
+<tr>
+<th class="px-3 py-2 border-b border-tactical-border">Target</th>
+<th class="px-3 py-2 border-b border-tactical-border">Latency</th>
+<th class="px-3 py-2 border-b border-tactical-border text-right">Status</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-tactical-border/50">
+<!-- Row 1: Healthy -->
+<tr class="hover:bg-tactical-accent/5 transition-colors">
+<td class="px-3 py-3 font-medium">8.8.8.8 (Google)</td>
+<td class="px-3 py-3 font-mono">14ms</td>
+<td class="px-3 py-3 text-right">
+<span class="inline-flex items-center px-1.5 py-0.5 rounded-sm bg-tactical-accent/10 text-tactical-accent border border-tactical-accent/20 text-[9px] font-bold uppercase">Healthy</span>
+</td>
+</tr>
+<!-- Row 2: Degraded -->
+<tr class="hover:bg-tactical-accent/5 transition-colors">
+<td class="px-3 py-3 font-medium">Core-Edge-NY-01</td>
+<td class="px-3 py-3 font-mono">184ms</td>
+<td class="px-3 py-3 text-right">
+<span class="inline-flex items-center px-1.5 py-0.5 rounded-sm bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 text-[9px] font-bold uppercase">Degraded</span>
+</td>
+</tr>
+<!-- Row 3: Healthy -->
+<tr class="hover:bg-tactical-accent/5 transition-colors">
+<td class="px-3 py-3 font-medium">Cloudflare (CDN)</td>
+<td class="px-3 py-3 font-mono">9ms</td>
+<td class="px-3 py-3 text-right">
+<span class="inline-flex items-center px-1.5 py-0.5 rounded-sm bg-tactical-accent/10 text-tactical-accent border border-tactical-accent/20 text-[9px] font-bold uppercase">Healthy</span>
+</td>
+</tr>
+<!-- Row 4: Down -->
+<tr class="hover:bg-tactical-accent/5 transition-colors bg-red-500/5">
+<td class="px-3 py-3 font-medium">Internal-DB-Sync</td>
+<td class="px-3 py-3 font-mono">TIMEOUT</td>
+<td class="px-3 py-3 text-right">
+<span class="inline-flex items-center px-1.5 py-0.5 rounded-sm bg-red-500/10 text-red-500 border border-red-500/20 text-[9px] font-bold uppercase">Down</span>
+</td>
+</tr>
+<!-- Row 5: Healthy -->
+<tr class="hover:bg-tactical-accent/5 transition-colors">
+<td class="px-3 py-3 font-medium">Shop-Frontend-API</td>
+<td class="px-3 py-3 font-mono">42ms</td>
+<td class="px-3 py-3 text-right">
+<span class="inline-flex items-center px-1.5 py-0.5 rounded-sm bg-tactical-accent/10 text-tactical-accent border border-tactical-accent/20 text-[9px] font-bold uppercase">Healthy</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<!-- END: RecentProbesTable -->
+</main>
+<footer class="fixed bottom-0 left-0 right-0 bg-tactical-bg border-t border-tactical-border px-6 py-3 flex justify-around items-center z-50">
+<!-- Footer Navigation Sim -->
+<div class="text-tactical-accent flex flex-col items-center">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span class="text-[8px] font-bold uppercase mt-1">Status</span>
+</div>
+<div class="text-tactical-muted flex flex-col items-center opacity-50">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span class="text-[8px] font-bold uppercase mt-1">Search</span>
+</div>
+<div class="text-tactical-muted flex flex-col items-center opacity-50">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span class="text-[8px] font-bold uppercase mt-1">Config</span>
+</div>
+</footer>
+<!-- BEGIN: CanvasDrawingScript -->
+<script data-purpose="canvas-sparklines">
+    function drawLineChart(canvasId, color, variation) {
+      const canvas = document.getElementById(canvasId);
+      const ctx = canvas.getContext('2d');
+      const dpr = window.devicePixelRatio || 1;
+      
+      // Resize for high DPI
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      ctx.scale(dpr, dpr);
+
+      const width = rect.width;
+      const height = rect.height;
+      
+      ctx.clearRect(0, 0, width, height);
+      
+      // Generate synthetic points
+      const points = 20;
+      const step = width / (points - 1);
+      const data = [];
+      for (let i = 0; i < points; i++) {
+        data.push(height * 0.5 + (Math.random() - 0.5) * height * variation);
+      }
+
+      // Draw path
+      ctx.beginPath();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+      
+      // Glow effect for line
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = color;
+
+      ctx.moveTo(0, data[0]);
+      for (let i = 1; i < points; i++) {
+        ctx.lineTo(i * step, data[i]);
+      }
+      ctx.stroke();
+
+      // Draw area gradient
+      ctx.shadowBlur = 0;
+      const gradient = ctx.createLinearGradient(0, 0, 0, height);
+      gradient.addColorStop(0, color + '22');
+      gradient.addColorStop(1, color + '00');
+      ctx.fillStyle = gradient;
+      ctx.lineTo(width, height);
+      ctx.lineTo(0, height);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // Initialize charts
+    function initDashboard() {
+      drawLineChart('chart-aws', '#25f46a', 0.4);
+      drawLineChart('chart-azure', '#25f46a', 0.6);
+      drawLineChart('chart-gcp', '#25f46a', 0.8);
+    }
+
+    // Redraw on resize and load
+    window.addEventListener('resize', initDashboard);
+    window.addEventListener('load', initDashboard);
+
+    // Minor animation loop to simulate live data
+    setInterval(() => {
+      initDashboard();
+    }, 5000);
+  </script>
+<!-- END: CanvasDrawingScript -->
+</body></html>
