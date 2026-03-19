@@ -129,6 +129,18 @@ func (t *chTransport) Send(key, data []byte) error {
 	nextHop := net.IP(msg.NextHop).String()
 	flowTypeName := flowTypeLabel(msg.Type)
 
+	// ── Sampling rate correction ─────────────────────────────────────────
+	// Routers with sampling (e.g. 1:1000) only export a fraction of packets.
+	// GoFlow2 populates SamplingRate from the flow record (NetFlow v9
+	// option template / IPFIX #305 / sFlow header).  Multiply bytes and
+	// packets by this factor so stored volumes match interface counters.
+	samplingRate := uint64(msg.SamplingRate)
+	if samplingRate == 0 {
+		samplingRate = 1 // no sampling info → store as-is
+	}
+	adjustedBytes := msg.Bytes * samplingRate
+	adjustedPackets := msg.Packets * samplingRate
+
 	q := `INSERT INTO metrics_flow
 		(tenant_id, device_id, timestamp,
 		 src_ip, dst_ip, src_port, dst_port, protocol, bytes, packets,
@@ -141,7 +153,7 @@ func (t *chTransport) Send(key, data []byte) error {
 	if err := database.CH.Exec(context.Background(), q,
 		dev.TenantID, dev.ID, time.Now(),
 		srcIP, dstIP, srcPort, dstPort, protoStr,
-		msg.Bytes, msg.Packets,
+		adjustedBytes, adjustedPackets,
 		srcASN.ASN, dstASN.ASN, srcASN.Name, dstASN.Name, appLabel,
 		flowTypeName, msg.InIf, msg.OutIf, msg.IpTos, msg.TcpFlags,
 		msg.VlanId, nextHop,
