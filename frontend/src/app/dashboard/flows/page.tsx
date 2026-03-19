@@ -24,6 +24,18 @@ type TimePoint = { bucket: string | number; in_bps: number; out_bps: number };
 type AppEntry  = { app: string; bytes: number };
 type ASNEntry  = { asn: number; asn_name: string; bytes: number };
 
+/* ── Time Range Options ── */
+const TIME_RANGES = [
+  { value: "5m",  label: "5 min" },
+  { value: "15m", label: "15 min" },
+  { value: "1h",  label: "1 hour" },
+  { value: "6h",  label: "6 hours" },
+  { value: "24h", label: "24 hours" },
+  { value: "7d",  label: "7 days" },
+  { value: "30d", label: "30 days" },
+] as const;
+type TimeRange = typeof TIME_RANGES[number]["value"];
+
 /* ── Formatters ── */
 function fmtBytes(b: number) {
   if (b >= 1e9) return (b / 1e9).toFixed(2) + " GB";
@@ -212,27 +224,31 @@ export default function FlowsPage() {
   const [topASNs,    setTopASNs]    = useState<ASNEntry[]>([]);
   const [loading,    setLoading]    = useState(true);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+  const [range,      setRange]      = useState<TimeRange>("5m");
+
+  const rangeLabel = TIME_RANGES.find(r => r.value === range)?.label ?? range;
 
   useEffect(() => {
+    setLoading(true);
     const fetchAll = () => {
       Promise.allSettled([
-        api.getTopTalkers().then(d    => setTopTalkers((d as any) ?? [])),
-        api.getFlowBandwidth().then(d => setBwStats((d as any) ?? null)),
-        api.getFlowTimeSeries().then(d => setTimeSeries((d as any) ?? [])),
-        api.getTopApplications().then(d => setTopApps((d as any) ?? [])),
-        api.getTopASNs().then(d       => setTopASNs((d as any) ?? [])),
+        api.getTopTalkers(range).then(d    => setTopTalkers((d as any) ?? [])),
+        api.getFlowBandwidth(range).then(d => setBwStats((d as any) ?? null)),
+        api.getFlowTimeSeries(range).then(d => setTimeSeries((d as any) ?? [])),
+        api.getTopApplications(range).then(d => setTopApps((d as any) ?? [])),
+        api.getTopASNs(range).then(d       => setTopASNs((d as any) ?? [])),
       ]).finally(() => { setLoading(false); setLastUpdate(new Date()); });
     };
     fetchAll();
     const t = setInterval(fetchAll, 30_000);
     return () => clearInterval(t);
-  }, []);
+  }, [range]);
 
   const maxBytes   = topTalkers[0]?.total_bytes ?? 1;
   const totalBytes = topTalkers.reduce((s, t) => s + (t.total_bytes ?? 0), 0);
 
   const kpis = [
-    { label:"Total Volume (1h)", value:loading ? "—" : (bwStats ? bwStats.total_gb.toFixed(2)+" GB" : "—"), color:"var(--color-primary)", icon:"storage",     variant:"primary" },
+    { label:`Total Volume (${rangeLabel})`, value:loading ? "—" : (bwStats ? bwStats.total_gb.toFixed(2)+" GB" : "—"), color:"var(--color-primary)", icon:"storage",     variant:"primary" },
     { label:"Active Flows",      value:loading ? "—" : (bwStats ? String(bwStats.active_flows ?? "—") : "—"), color:"#10b981",               icon:"stream",      variant:"green",  pulse: !loading && (bwStats?.active_flows ?? 0) > 0 },
     { label:"TCP Share",         value:loading ? "—" : (bwStats ? bwStats.tcp_pct.toFixed(0)+"%" : "—"),     color:"#6366f1",               icon:"sync_alt",    variant:"indigo" },
     { label:"Top Talkers",       value:loading ? "—" : String(topTalkers.length),                            color:"var(--color-accent)",   icon:"leaderboard", variant:"accent" },
@@ -240,10 +256,31 @@ export default function FlowsPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Header */}
-      <div className="flow-animate flow-animate-d1">
-        <h1 className="text-2xl font-bold" style={{ color:"var(--color-text)" }}>NetFlow Analytics</h1>
-        <p className="text-sm mt-0.5" style={{ color:"var(--color-text-dim)" }}>Real-time flow telemetry — 30s auto-refresh</p>
+      {/* Header + Time Range Picker */}
+      <div className="flow-animate flow-animate-d1 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold" style={{ color:"var(--color-text)" }}>NetFlow Analytics</h1>
+          <p className="text-sm mt-0.5" style={{ color:"var(--color-text-dim)" }}>Real-time flow telemetry — 30s auto-refresh</p>
+        </div>
+        <div className="time-range-bar flex items-center gap-1 p-1 rounded-xl"
+          style={{ background:"var(--color-surface-2)", border:"1px solid var(--color-border)" }}>
+          {TIME_RANGES.map(r => (
+            <button
+              key={r.value}
+              onClick={() => setRange(r.value)}
+              className={`time-range-pill px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                range === r.value ? "time-range-pill--active" : ""
+              }`}
+              style={{
+                background: range === r.value ? "var(--color-primary)" : "transparent",
+                color: range === r.value ? "#fff" : "var(--color-text-dim)",
+                boxShadow: range === r.value ? "0 2px 8px rgba(99,102,241,0.3)" : "none",
+              }}
+            >
+              {r.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* KPI row */}
@@ -266,7 +303,7 @@ export default function FlowsPage() {
         style={{ background:"var(--color-surface-1)", border:"1px solid var(--color-border)" }}>
         <div className="flex items-center gap-2 mb-4">
           <span className="material-symbols-outlined text-base" style={{ color:"var(--color-primary)" }}>show_chart</span>
-          <span className="text-sm font-semibold" style={{ color:"var(--color-text)" }}>Bandwidth (1h — 5-min buckets)</span>
+          <span className="text-sm font-semibold" style={{ color:"var(--color-text)" }}>Bandwidth ({rangeLabel})</span>
           <div className="ml-auto flex items-center gap-4 text-xs" style={{ color:"var(--color-text-dim)" }}>
             <span className="last-updated">Updated {fmtTime(lastUpdate)}</span>
             <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 rounded inline-block" style={{ background:"#6366f1" }} /> Inbound</span>
@@ -288,7 +325,7 @@ export default function FlowsPage() {
             <span className="text-sm font-semibold" style={{ color:"var(--color-text)" }}>Protocol Breakdown</span>
             {bwStats && (
               <span className="ml-auto text-xs font-metric" style={{ color:"var(--color-text-dim)" }}>
-                {bwStats.total_gb.toFixed(2)} GB / 1h
+                {bwStats.total_gb.toFixed(2)} GB / {rangeLabel}
               </span>
             )}
           </div>
@@ -300,7 +337,7 @@ export default function FlowsPage() {
           style={{ background:"var(--color-surface-1)", border:"1px solid var(--color-border)" }}>
           <div className="flex items-center gap-2 px-5 py-3 border-b" style={{ borderColor:"var(--color-border)" }}>
             <span className="material-symbols-outlined text-base" style={{ color:"var(--color-accent)" }}>leaderboard</span>
-            <span className="text-sm font-semibold" style={{ color:"var(--color-text)" }}>Top Talkers (1h)</span>
+            <span className="text-sm font-semibold" style={{ color:"var(--color-text)" }}>Top Talkers ({rangeLabel})</span>
             <span className="ml-auto text-xs font-metric" style={{ color:"var(--color-text-dim)" }}>
               {fmtBytes(totalBytes)} total
             </span>
@@ -352,7 +389,7 @@ export default function FlowsPage() {
           style={{ background:"var(--color-surface-1)", border:"1px solid var(--color-border)" }}>
           <div className="flex items-center gap-2 mb-4">
             <span className="material-symbols-outlined text-base" style={{ color:"#f59e0b" }}>apps</span>
-            <span className="text-sm font-semibold" style={{ color:"var(--color-text)" }}>Top Applications (1h)</span>
+            <span className="text-sm font-semibold" style={{ color:"var(--color-text)" }}>Top Applications ({rangeLabel})</span>
           </div>
           <div className="h-52"><AppsDonut data={topApps} /></div>
         </div>
@@ -362,7 +399,7 @@ export default function FlowsPage() {
           style={{ background:"var(--color-surface-1)", border:"1px solid var(--color-border)" }}>
           <div className="flex items-center gap-2 mb-4">
             <span className="material-symbols-outlined text-base" style={{ color:"#3b82f6" }}>public</span>
-            <span className="text-sm font-semibold" style={{ color:"var(--color-text)" }}>Top Destination ASNs (1h)</span>
+            <span className="text-sm font-semibold" style={{ color:"var(--color-text)" }}>Top Destination ASNs ({rangeLabel})</span>
           </div>
           <div className="h-52"><ASNBars data={topASNs} /></div>
         </div>
@@ -373,13 +410,13 @@ export default function FlowsPage() {
         style={{ background:"var(--color-surface-1)", border:"1px solid var(--color-border)" }}>
         <div className="flex items-center gap-2 mb-4">
           <span className="material-symbols-outlined text-base" style={{ color:"#6366f1" }}>travel_explore</span>
-          <span className="text-sm font-semibold" style={{ color:"var(--color-text)" }}>Geographic Traffic (1h)</span>
+          <span className="text-sm font-semibold" style={{ color:"var(--color-text)" }}>Geographic Traffic ({rangeLabel})</span>
           <div className="ml-auto map-legend">
             <span className="flex items-center gap-1"><span className="map-legend-dot" style={{ background:"#8b5cf6" }} /> Source</span>
             <span className="flex items-center gap-1"><span className="map-legend-dot" style={{ background:"#10b981" }} /> Destination</span>
           </div>
         </div>
-        <div className="h-[340px]"><GeoFlowMap /></div>
+        <div className="h-[340px]"><GeoFlowMap range={range} /></div>
       </div>
 
       {/* ── Row 5 – Full-width Sankey Diagram ── */}
@@ -387,9 +424,9 @@ export default function FlowsPage() {
         style={{ background:"var(--color-surface-1)", border:"1px solid var(--color-border)" }}>
         <div className="flex items-center gap-2 mb-4">
           <span className="material-symbols-outlined text-base" style={{ color:"#8b5cf6" }}>account_tree</span>
-          <span className="text-sm font-semibold" style={{ color:"var(--color-text)" }}>Traffic Flow: Source → Protocol → App (1h)</span>
+          <span className="text-sm font-semibold" style={{ color:"var(--color-text)" }}>Traffic Flow: Source → Protocol → App ({rangeLabel})</span>
         </div>
-        <div className="h-[340px]"><SankeyDiagram /></div>
+        <div className="h-[340px]"><SankeyDiagram range={range} /></div>
       </div>
     </div>
   );

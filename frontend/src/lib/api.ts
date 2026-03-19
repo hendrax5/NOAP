@@ -112,13 +112,13 @@ export const api = {
   getBGPMetrics: () => apiFetch("/api/metrics/bgp"),
   getMPLSMetrics: () => apiFetch("/api/metrics/mpls"),
   getTopology: () => apiFetch("/api/metrics/topology"),
-  getTopTalkers: () => apiFetch("/api/metrics/flows/top-talkers"),
-  getFlowBandwidth: () => apiFetch("/api/metrics/flows/bandwidth"),
-  getFlowTimeSeries: () => apiFetch("/api/metrics/flows/timeseries"),
-  getTopApplications: () => apiFetch("/api/metrics/flows/apps"),
-  getTopASNs: () => apiFetch("/api/metrics/flows/asns"),
-  getGeoFlows: () => apiFetch("/api/metrics/flows/geo"),
-  getSankeyFlows: () => apiFetch("/api/metrics/flows/sankey"),
+  getTopTalkers: (range = "5m") => apiFetch(`/api/metrics/flows/top-talkers?range=${range}`),
+  getFlowBandwidth: (range = "5m") => apiFetch(`/api/metrics/flows/bandwidth?range=${range}`),
+  getFlowTimeSeries: (range = "5m") => apiFetch(`/api/metrics/flows/timeseries?range=${range}`),
+  getTopApplications: (range = "5m") => apiFetch(`/api/metrics/flows/apps?range=${range}`),
+  getTopASNs: (range = "5m") => apiFetch(`/api/metrics/flows/asns?range=${range}`),
+  getGeoFlows: (range = "5m") => apiFetch(`/api/metrics/flows/geo?range=${range}`),
+  getSankeyFlows: (range = "5m") => apiFetch(`/api/metrics/flows/sankey?range=${range}`),
   queryFlows: (body: {
     dimensions: string[];
     metric: "bytes" | "packets";

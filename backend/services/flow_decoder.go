@@ -1,6 +1,7 @@
 package services
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"log"
@@ -18,7 +19,7 @@ import (
 	"github.com/netsampler/goflow2/v3/pkg/goflow2/app"
 	"github.com/netsampler/goflow2/v3/pkg/goflow2/config"
 	"github.com/netsampler/goflow2/v3/transport"
-	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/encoding/protodelim"
 )
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -81,9 +82,10 @@ func (t *chTransport) Send(key, data []byte) error {
 		return nil
 	}
 
-	// Deserialise the FlowMessage protobuf
+	// Deserialise the FlowMessage protobuf (GoFlow2 binary format uses
+	// length-delimited encoding via protodelim.MarshalTo).
 	msg := &flowpb.FlowMessage{}
-	if err := proto.Unmarshal(data, msg); err != nil {
+	if err := protodelim.UnmarshalFrom(bytes.NewReader(data), msg); err != nil {
 		log.Printf("[FlowDecoder] protobuf unmarshal error: %v", err)
 		return nil // don't kill the pipeline for bad data
 	}

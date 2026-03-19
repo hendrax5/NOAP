@@ -35,16 +35,16 @@ const ARC_PALETTE = [
   "#10b981","#f59e0b","#ef4444","#3b82f6","#ec4899",
 ];
 
-function GeoFlowMap() {
+function GeoFlowMap({ range = "5m" }: { range?: string }) {
   const [arcs, setArcs] = useState<Arc[]>([]);
 
   useEffect(() => {
     const load = () =>
-      api.getGeoFlows().then(d => setArcs((d as Arc[]) ?? [])).catch(() => {});
+      api.getGeoFlows(range).then(d => setArcs((d as Arc[]) ?? [])).catch(() => {});
     load();
     const t = setInterval(load, 30_000);
     return () => clearInterval(t);
-  }, []);
+  }, [range]);
 
   const maxBytes = useMemo(() => Math.max(...arcs.map(a => a.bytes), 1), [arcs]);
   const [hover, setHover] = useState<number | null>(null);
