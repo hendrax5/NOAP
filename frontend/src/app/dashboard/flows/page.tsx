@@ -6,6 +6,10 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
 } from "recharts";
 import { api } from "@/lib/api";
+import {
+  SAMPLE_TALKERS, SAMPLE_BW_STATS, SAMPLE_TIME_SERIES,
+  SAMPLE_APPS, SAMPLE_ASNS,
+} from "@/lib/sampleFlowData";
 import "./flows.css";
 
 const GeoFlowMap    = dynamic(() => import("@/components/flows/GeoFlowMap"),    { ssr: false });
@@ -217,14 +221,15 @@ function ProtoBadge({ p }: { p: string }) {
 
 /* ── Page ── */
 export default function FlowsPage() {
-  const [topTalkers, setTopTalkers] = useState<Talker[]>([]);
-  const [bwStats,    setBwStats]    = useState<BwStats | null>(null);
-  const [timeSeries, setTimeSeries] = useState<TimePoint[]>([]);
-  const [topApps,    setTopApps]    = useState<AppEntry[]>([]);
-  const [topASNs,    setTopASNs]    = useState<ASNEntry[]>([]);
-  const [loading,    setLoading]    = useState(true);
+  const [topTalkers, setTopTalkers] = useState<Talker[]>(SAMPLE_TALKERS);
+  const [bwStats,    setBwStats]    = useState<BwStats | null>(SAMPLE_BW_STATS);
+  const [timeSeries, setTimeSeries] = useState<TimePoint[]>(SAMPLE_TIME_SERIES);
+  const [topApps,    setTopApps]    = useState<AppEntry[]>(SAMPLE_APPS);
+  const [topASNs,    setTopASNs]    = useState<ASNEntry[]>(SAMPLE_ASNS);
+  const [loading,    setLoading]    = useState(false);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const [range,      setRange]      = useState<TimeRange>("5m");
+  const [usingDemo,  setUsingDemo]  = useState(true);
 
   const rangeLabel = TIME_RANGES.find(r => r.value === range)?.label ?? range;
 
@@ -232,11 +237,26 @@ export default function FlowsPage() {
     setLoading(true);
     const fetchAll = () => {
       Promise.allSettled([
-        api.getTopTalkers(range).then(d    => setTopTalkers((d as any) ?? [])),
-        api.getFlowBandwidth(range).then(d => setBwStats((d as any) ?? null)),
-        api.getFlowTimeSeries(range).then(d => setTimeSeries((d as any) ?? [])),
-        api.getTopApplications(range).then(d => setTopApps((d as any) ?? [])),
-        api.getTopASNs(range).then(d       => setTopASNs((d as any) ?? [])),
+        api.getTopTalkers(range).then(d => {
+          const rows = (d as any) ?? [];
+          if (rows.length > 0) { setTopTalkers(rows); setUsingDemo(false); }
+        }),
+        api.getFlowBandwidth(range).then(d => {
+          const stats = (d as any) ?? null;
+          if (stats && stats.total_gb > 0) { setBwStats(stats); setUsingDemo(false); }
+        }),
+        api.getFlowTimeSeries(range).then(d => {
+          const pts = (d as any) ?? [];
+          if (pts.length > 0) { setTimeSeries(pts); }
+        }),
+        api.getTopApplications(range).then(d => {
+          const apps = (d as any) ?? [];
+          if (apps.length > 0) setTopApps(apps);
+        }),
+        api.getTopASNs(range).then(d => {
+          const asns = (d as any) ?? [];
+          if (asns.length > 0) setTopASNs(asns);
+        }),
       ]).finally(() => { setLoading(false); setLastUpdate(new Date()); });
     };
     fetchAll();
@@ -259,8 +279,20 @@ export default function FlowsPage() {
       {/* Header + Time Range Picker */}
       <div className="flow-animate flow-animate-d1 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold" style={{ color:"var(--color-text)" }}>NetFlow Analytics</h1>
-          <p className="text-sm mt-0.5" style={{ color:"var(--color-text-dim)" }}>Real-time flow telemetry — 30s auto-refresh</p>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold" style={{ color:"var(--color-text)" }}>NetFlow Analytics</h1>
+            {usingDemo && (
+              <span className="px-2 py-0.5 rounded-full text-xs font-semibold"
+                style={{ background:"#f59e0b22", color:"#f59e0b", border:"1px solid #f59e0b44" }}>
+                Demo Data
+              </span>
+            )}
+          </div>
+          <p className="text-sm mt-0.5" style={{ color:"var(--color-text-dim)" }}>
+            {usingDemo
+              ? "Showing sample data — waiting for real NetFlow traffic…"
+              : "Real-time flow telemetry — 30s auto-refresh"}
+          </p>
         </div>
         <div className="time-range-bar flex items-center gap-1 p-1 rounded-xl"
           style={{ background:"var(--color-surface-2)", border:"1px solid var(--color-border)" }}>

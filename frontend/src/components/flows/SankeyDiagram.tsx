@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useState, memo, useMemo } from "react";
 import { api } from "@/lib/api";
+import { SAMPLE_SANKEY } from "@/lib/sampleFlowData";
+
 
 /* ── types ── */
 type SankeyData = {
@@ -33,7 +35,7 @@ type LayoutLink = {
 function layoutSankey(
   data: SankeyData, W: number, H: number
 ): { nodes: LayoutNode[]; links: LayoutLink[] } {
-  if (!data.nodes.length) return { nodes:[], links:[] };
+  if (!data?.nodes?.length) return { nodes:[], links:[] };
 
   const sourceSet = new Set(data.links.map(l => l.source));
   const targetSet = new Set(data.links.map(l => l.target));
@@ -106,16 +108,20 @@ function layoutSankey(
 
 /* ── component ── */
 function SankeyDiagram({ range = "5m" }: { range?: string }) {
-  const [data, setData] = useState<SankeyData | null>(null);
+  const [data, setData] = useState<SankeyData | null>(SAMPLE_SANKEY as SankeyData);
   const [hover, setHover] = useState<string | null>(null);
 
   useEffect(() => {
     const load = () =>
-      api.getSankeyFlows(range).then(d => setData(d as SankeyData)).catch(() => {});
+      api.getSankeyFlows(range).then(d => {
+        const sd = d as SankeyData;
+        if (sd?.nodes?.length) setData(sd);
+      }).catch(() => {});
     load();
     const t = setInterval(load, 30_000);
     return () => clearInterval(t);
   }, [range]);
+
 
   const W = 600;
   const H = 300;
