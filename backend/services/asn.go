@@ -84,8 +84,14 @@ func init() {
 }
 
 // LookupASN returns the ASNInfo for the given dotted-decimal IPv4 string.
-// Falls back to ASN 0 / "Unknown" for IPs not in the table.
+// Tries MaxMind MMDB first; falls back to static table if MMDB unavailable.
 func LookupASN(ipStr string) ASNInfo {
+	// Prefer MMDB when loaded
+	if info, ok := LookupASNFromMMDB(ipStr); ok && info.ASN != 0 {
+		return info
+	}
+
+	// Static-table fallback
 	ip := net.ParseIP(ipStr).To4()
 	if ip == nil {
 		return ASNInfo{0, "Unknown"}

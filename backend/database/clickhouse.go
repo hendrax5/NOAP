@@ -170,5 +170,25 @@ func initClickHouseSchema(ctx context.Context) {
 	CH.Exec(ctx, "ALTER TABLE metrics_flow ADD COLUMN IF NOT EXISTS dst_asn_name String DEFAULT ''")
 	CH.Exec(ctx, "ALTER TABLE metrics_flow ADD COLUMN IF NOT EXISTS app String DEFAULT ''")
 
+	// Phase 2 — GeoIP + multi-protocol flow columns
+	CH.Exec(ctx, "ALTER TABLE metrics_flow ADD COLUMN IF NOT EXISTS flow_type String DEFAULT 'netflow_v5'")
+	CH.Exec(ctx, "ALTER TABLE metrics_flow ADD COLUMN IF NOT EXISTS src_country String DEFAULT ''")
+	CH.Exec(ctx, "ALTER TABLE metrics_flow ADD COLUMN IF NOT EXISTS dst_country String DEFAULT ''")
+	CH.Exec(ctx, "ALTER TABLE metrics_flow ADD COLUMN IF NOT EXISTS src_city String DEFAULT ''")
+	CH.Exec(ctx, "ALTER TABLE metrics_flow ADD COLUMN IF NOT EXISTS dst_city String DEFAULT ''")
+	CH.Exec(ctx, "ALTER TABLE metrics_flow ADD COLUMN IF NOT EXISTS in_if UInt32 DEFAULT 0")
+	CH.Exec(ctx, "ALTER TABLE metrics_flow ADD COLUMN IF NOT EXISTS out_if UInt32 DEFAULT 0")
+	CH.Exec(ctx, "ALTER TABLE metrics_flow ADD COLUMN IF NOT EXISTS next_hop String DEFAULT ''")
+	CH.Exec(ctx, "ALTER TABLE metrics_flow ADD COLUMN IF NOT EXISTS tcp_flags UInt8 DEFAULT 0")
+	CH.Exec(ctx, "ALTER TABLE metrics_flow ADD COLUMN IF NOT EXISTS sampling_rate UInt32 DEFAULT 1")
+	CH.Exec(ctx, "ALTER TABLE metrics_flow ADD COLUMN IF NOT EXISTS tos UInt8 DEFAULT 0")
+	CH.Exec(ctx, "ALTER TABLE metrics_flow ADD COLUMN IF NOT EXISTS vlan_id UInt32 DEFAULT 0")
+
+	// Phase 3 — lat/lon for geo map arcs
+	CH.Exec(ctx, "ALTER TABLE metrics_flow ADD COLUMN IF NOT EXISTS src_lat Float64 DEFAULT 0")
+	CH.Exec(ctx, "ALTER TABLE metrics_flow ADD COLUMN IF NOT EXISTS src_lon Float64 DEFAULT 0")
+	CH.Exec(ctx, "ALTER TABLE metrics_flow ADD COLUMN IF NOT EXISTS dst_lat Float64 DEFAULT 0")
+	CH.Exec(ctx, "ALTER TABLE metrics_flow ADD COLUMN IF NOT EXISTS dst_lon Float64 DEFAULT 0")
+
 	log.Println("ClickHouse schema verified")
 }

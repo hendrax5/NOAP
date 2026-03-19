@@ -176,16 +176,24 @@ func parseNetFlowV5(data []byte, srcAddr string) error {
 		dstASN := LookupASN(dstIP)
 		app := MapApplication(dstPort, srcPort, proto)
 
+		// GeoIP enrichment (Phase 2)
+		srcGeo := LookupGeoIP(srcIP)
+		dstGeo := LookupGeoIP(dstIP)
+
 		q := `INSERT INTO metrics_flow
 			(tenant_id, device_id, timestamp,
 			 src_ip, dst_ip, src_port, dst_port, protocol, bytes, packets,
-			 src_asn, dst_asn, src_asn_name, dst_asn_name, app)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+			 src_asn, dst_asn, src_asn_name, dst_asn_name, app,
+			 src_country, dst_country, src_city, dst_city,
+			 src_lat, src_lon, dst_lat, dst_lon)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 		if err := database.CH.Exec(context.Background(), q,
 			dev.TenantID, dev.ID, time.Now(),
 			srcIP, dstIP, srcPort, dstPort, proto,
 			uint64(bytes), uint64(pkts),
 			srcASN.ASN, dstASN.ASN, srcASN.Name, dstASN.Name, app,
+			srcGeo.Country, dstGeo.Country, srcGeo.City, dstGeo.City,
+			srcGeo.Lat, srcGeo.Lon, dstGeo.Lat, dstGeo.Lon,
 		); err != nil {
 			log.Printf("[FlowReceiver] CH insert error: %v", err)
 		}
@@ -254,11 +262,17 @@ func startMockFlowReceiver() {
 				dstASN := LookupASN(dst)
 				app := MapApplication(dstPort, uint16(rand.Intn(65000)+1024), proto)
 
+				// GeoIP enrichment (Phase 2)
+				srcGeo := LookupGeoIP(src)
+				dstGeo := LookupGeoIP(dst)
+
 				q := `INSERT INTO metrics_flow
 					(tenant_id, device_id, timestamp,
 					 src_ip, dst_ip, src_port, dst_port, protocol, bytes, packets,
-					 src_asn, dst_asn, src_asn_name, dst_asn_name, app)
-					VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+					 src_asn, dst_asn, src_asn_name, dst_asn_name, app,
+					 src_country, dst_country, src_city, dst_city,
+					 src_lat, src_lon, dst_lat, dst_lon)
+					VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 				err := database.CH.Exec(context.Background(), q,
 					dev.TenantID, dev.ID, time.Now(),
 					src, dst,
@@ -267,6 +281,8 @@ func startMockFlowReceiver() {
 					uint64(rand.Intn(5000000)+500),
 					uint64(rand.Intn(5000)+10),
 					srcASN.ASN, dstASN.ASN, srcASN.Name, dstASN.Name, app,
+					srcGeo.Country, dstGeo.Country, srcGeo.City, dstGeo.City,
+					srcGeo.Lat, srcGeo.Lon, dstGeo.Lat, dstGeo.Lon,
 				)
 				if err != nil {
 					log.Println("[FlowReceiver] Mock insert error:", err)

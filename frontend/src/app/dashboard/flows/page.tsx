@@ -1,11 +1,15 @@
 "use client";
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
   BarChart, Bar,
 } from "recharts";
 import { api } from "@/lib/api";
+
+const GeoFlowMap    = dynamic(() => import("@/components/flows/GeoFlowMap"),    { ssr: false });
+const SankeyDiagram = dynamic(() => import("@/components/flows/SankeyDiagram"), { ssr: false });
 
 /* ── Types ── */
 type Talker = {
@@ -346,6 +350,26 @@ export default function FlowsPage() {
           </div>
           <div className="h-52"><ASNBars data={topASNs} /></div>
         </div>
+      </div>
+
+      {/* ── Row 4 – Full-width Geo Traffic Map ── */}
+      <div className="rounded-2xl p-5"
+        style={{ background:"var(--color-surface-1)", border:"1px solid var(--color-border)" }}>
+        <div className="flex items-center gap-2 mb-4">
+          <span className="material-symbols-outlined text-base" style={{ color:"#6366f1" }}>travel_explore</span>
+          <span className="text-sm font-semibold" style={{ color:"var(--color-text)" }}>Geographic Traffic (1h)</span>
+        </div>
+        <div className="h-[340px]"><GeoFlowMap /></div>
+      </div>
+
+      {/* ── Row 5 – Full-width Sankey Diagram ── */}
+      <div className="rounded-2xl p-5"
+        style={{ background:"var(--color-surface-1)", border:"1px solid var(--color-border)" }}>
+        <div className="flex items-center gap-2 mb-4">
+          <span className="material-symbols-outlined text-base" style={{ color:"#8b5cf6" }}>account_tree</span>
+          <span className="text-sm font-semibold" style={{ color:"var(--color-text)" }}>Traffic Flow: Source → Protocol → App (1h)</span>
+        </div>
+        <div className="h-[300px]"><SankeyDiagram /></div>
       </div>
     </div>
   );

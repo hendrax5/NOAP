@@ -57,8 +57,9 @@ func main() {
 	go workers.StartBGPPoller()
 	go workers.StartMPLSPoller()
 
-	// Phase 4 flow receivers
-	go services.StartFlowReceiver()
+	// Phase 4 flow receivers — GoFlow2 multi-protocol (NetFlow v5/v9, IPFIX, sFlow)
+	services.InitGeoIP() // load MaxMind MMDB databases (no-op if not configured)
+	go services.StartGoFlow2Receiver()
 
 	// Phase 5 Topology discovery
 	go workers.StartTopologyPoller()
@@ -149,6 +150,8 @@ func main() {
 	protected.Get("/metrics/flows/timeseries", handlers.GetFlowTimeSeries) // P4
 	protected.Get("/metrics/flows/apps", handlers.GetTopApplications)      // P4
 	protected.Get("/metrics/flows/asns", handlers.GetTopASNs)              // P4
+	protected.Get("/metrics/flows/geo", handlers.GetGeoFlows)              // P5 — geo map arcs
+	protected.Get("/metrics/flows/sankey", handlers.GetSankeyFlows)        // P5 — sankey diagram
 	protected.Get("/metrics/topology", handlers.GetTopologyMap)
 
 	// ── Config / Automation routes ──────────────────────────────────────────

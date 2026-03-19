@@ -275,3 +275,163 @@ func GetTopASNs(c *fiber.Ctx) error {
 	}
 	return c.JSON(results)
 }
+
+// ────────────────────────────────────────────────────────────────────────────
+// GetGeoFlows — country-to-country traffic arcs with lat/lon (Phase 3)
+// GET /metrics/flows/geo
+// ────────────────────────────────────────────────────────────────────────────
+
+func GetGeoFlows(c *fiber.Ctx) error {
+	tenantID := middleware.TenantID(c)
+	if tenantID == 0 {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
+	}
+
+	if database.CH == nil {
+		return c.JSON([]map[string]interface{}{
+			{"src_country": "US", "dst_country": "DE", "src_lat": 37.751, "src_lon": -97.822, "dst_lat": 51.165, "dst_lon": 10.451, "bytes": 185_000_000},
+			{"src_country": "US", "dst_country": "JP", "src_lat": 37.751, "src_lon": -97.822, "dst_lat": 36.204, "dst_lon": 138.252, "bytes": 120_000_000},
+			{"src_country": "US", "dst_country": "GB", "src_lat": 37.751, "src_lon": -97.822, "dst_lat": 55.378, "dst_lon": -3.436, "bytes": 98_000_000},
+			{"src_country": "US", "dst_country": "AU", "src_lat": 37.751, "src_lon": -97.822, "dst_lat": -25.274, "dst_lon": 133.775, "bytes": 74_000_000},
+			{"src_country": "US", "dst_country": "BR", "src_lat": 37.751, "src_lon": -97.822, "dst_lat": -14.235, "dst_lon": -51.925, "bytes": 45_000_000},
+			{"src_country": "US", "dst_country": "SG", "src_lat": 37.751, "src_lon": -97.822, "dst_lat": 1.352, "dst_lon": 103.82, "bytes": 23_000_000},
+		})
+	}
+
+	query := `
+		SELECT src_country, dst_country,
+		       any(src_lat) as src_lat, any(src_lon) as src_lon,
+		       any(dst_lat) as dst_lat, any(dst_lon) as dst_lon,
+		       sum(bytes) as total_bytes
+		FROM metrics_flow
+		WHERE tenant_id = ? AND timestamp >= now() - INTERVAL 1 HOUR
+		  AND src_country != '' AND dst_country != ''
+		  AND src_country != dst_country
+		GROUP BY src_country, dst_country
+		ORDER BY total_bytes DESC
+		LIMIT 15
+	`
+	rows, err := database.CH.Query(c.Context(), query, tenantID)
+	if err != nil {
+		log.Println("Error querying geo flows:", err)
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch geo flows"})
+	}
+	defer rows.Close()
+
+	var results []map[string]interface{}
+	for rows.Next() {
+		var srcCountry, dstCountry string
+		var srcLat, srcLon, dstLat, dstLon float64
+		var bytes uint64
+		if err := rows.Scan(&srcCountry, &dstCountry, &srcLat, &srcLon, &dstLat, &dstLon, &bytes); err == nil {
+			results = append(results, map[string]interface{}{
+				"src_country": srcCountry,
+				"dst_country": dstCountry,
+				"src_lat":     srcLat,
+				"src_lon":     srcLon,
+				"dst_lat":     dstLat,
+				"dst_lon":     dstLon,
+				"bytes":       bytes,
+			})
+		}
+	}
+	return c.JSON(results)
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// GetSankeyFlows — source → protocol → app flow links (Phase 3)
+// GET /metrics/flows/sankey
+// ────────────────────────────────────────────────────────────────────────────
+
+func GetSankeyFlows(c *fiber.Ctx) error {
+	tenantID := middleware.TenantID(c)
+	if tenantID == 0 {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
+	}
+
+	if database.CH == nil {
+		return c.JSON(fiber.Map{
+			"nodes": []map[string]interface{}{
+				{"id": "10.0.0.1"}, {"id": "10.0.0.2"}, {"id": "192.168.1.100"},
+				{"id": "TCP"}, {"id": "UDP"},
+				{"id": "HTTPS"}, {"id": "DNS"}, {"id": "SSH"}, {"id": "HTTP"},
+			},
+			"links": []map[string]interface{}{
+				{"source": "10.0.0.1", "target": "TCP", "value": 210_000_000},
+				{"source": "10.0.0.2", "target": "TCP", "value": 145_000_000},
+				{"source": "192.168.1.100", "target": "UDP", "value": 58_000_000},
+				{"source": "192.168.1.100", "target": "TCP", "value": 32_000_000},
+				{"source": "TCP", "target": "HTTPS", "value": 280_000_000},
+				{"source": "TCP", "target": "SSH", "value": 45_000_000},
+				{"source": "TCP", "target": "HTTP", "value": 62_000_000},
+				{"source": "UDP", "target": "DNS", "value": 58_000_000},
+			},
+		})
+	}
+
+	// Left-to-middle links: src_ip → protocol
+	q1 := `
+		SELECT src_ip, protocol, sum(bytes) as total_bytes
+		FROM metrics_flow
+		WHERE tenant_id = ? AND timestamp >= now() - INTERVAL 1 HOUR
+		GROUP BY src_ip, protocol
+		ORDER BY total_bytes DESC
+		LIMIT 15
+	`
+	rows1, err := database.CH.Query(c.Context(), q1, tenantID)
+	if err != nil {
+		log.Println("Error querying sankey src→proto:", err)
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch sankey data"})
+	}
+	defer rows1.Close()
+
+	nodeSet := map[string]bool{}
+	var links []map[string]interface{}
+	for rows1.Next() {
+		var src, proto string
+		var bytes uint64
+		if err := rows1.Scan(&src, &proto, &bytes); err == nil {
+			nodeSet[src] = true
+			nodeSet[proto] = true
+			links = append(links, map[string]interface{}{
+				"source": src, "target": proto, "value": bytes,
+			})
+		}
+	}
+
+	// Middle-to-right links: protocol → app
+	q2 := `
+		SELECT protocol, app, sum(bytes) as total_bytes
+		FROM metrics_flow
+		WHERE tenant_id = ? AND timestamp >= now() - INTERVAL 1 HOUR
+		  AND app != ''
+		GROUP BY protocol, app
+		ORDER BY total_bytes DESC
+		LIMIT 15
+	`
+	rows2, err := database.CH.Query(c.Context(), q2, tenantID)
+	if err != nil {
+		log.Println("Error querying sankey proto→app:", err)
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch sankey data"})
+	}
+	defer rows2.Close()
+
+	for rows2.Next() {
+		var proto, app string
+		var bytes uint64
+		if err := rows2.Scan(&proto, &app, &bytes); err == nil {
+			nodeSet[proto] = true
+			nodeSet[app] = true
+			links = append(links, map[string]interface{}{
+				"source": proto, "target": app, "value": bytes,
+			})
+		}
+	}
+
+	var nodes []map[string]interface{}
+	for id := range nodeSet {
+		nodes = append(nodes, map[string]interface{}{"id": id})
+	}
+
+	return c.JSON(fiber.Map{"nodes": nodes, "links": links})
+}
