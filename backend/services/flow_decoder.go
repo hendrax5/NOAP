@@ -29,10 +29,12 @@ import (
 
 // chTransport implements GoFlow2 transport.TransportDriver.
 type chTransport struct {
-	mu         sync.Mutex
-	deviceMap  map[string]*models.Device
-	cacheUntil time.Time
+	mu            sync.Mutex
+	deviceMap     map[string]*models.Device
+	cacheUntil    time.Time
+	unknownLogAt  map[string]time.Time // rate-limit "unknown exporter" warnings
 }
+
 
 // Register the driver at init so GoFlow2 can find it by name.
 func init() {
@@ -91,19 +93,32 @@ func (t *chTransport) Send(key, data []byte) error {
 	}
 
 	// Resolve exporter IP → NOAP device
-	exporterIP := net.IP(msg.SamplerAddress).String()
+	exporterRaw := net.IP(msg.SamplerAddress)
+	exporterIP := exporterRaw.String()
 	dev := t.lookupDevice(exporterIP)
 	if dev == nil {
-		// Try stripping mapped-v4 prefix
+		// Try stripping IPv6-mapped-v4 prefix (e.g. "::ffff:202.58.75.133" → "202.58.75.133")
 		if parsed := net.ParseIP(exporterIP); parsed != nil {
 			if v4 := parsed.To4(); v4 != nil {
-				dev = t.lookupDevice(v4.String())
+				exporterIP = v4.String()
+				dev = t.lookupDevice(exporterIP)
 			}
 		}
 		if dev == nil {
-			return nil // exporter not registered in NOAP
+			// Rate-limited warning: log once per 5 minutes per unknown exporter IP
+			t.mu.Lock()
+			if t.unknownLogAt == nil {
+				t.unknownLogAt = make(map[string]time.Time)
+			}
+			if time.Since(t.unknownLogAt[exporterIP]) > 5*time.Minute {
+				log.Printf("[FlowDecoder] WARNING: dropping flows from UNREGISTERED exporter %s — add this device in NOAP to start collecting", exporterIP)
+				t.unknownLogAt[exporterIP] = time.Now()
+			}
+			t.mu.Unlock()
+			return nil
 		}
 	}
+
 
 	srcIP := net.IP(msg.SrcAddr).String()
 	dstIP := net.IP(msg.DstAddr).String()
