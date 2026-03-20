@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"regexp"
 	"strings"
@@ -78,6 +79,7 @@ func pollBGP(dev models.Device) {
 		Version:   gosnmp.Version2c,
 		Timeout:   5 * time.Second,
 		Retries:   1,
+		Logger:    gosnmp.NewLogger(log.New(io.Discard, "", 0)),
 	}
 	if err := params.Connect(); err != nil {
 		log.Printf("[BGP] connect %s: %v", dev.IP, err)

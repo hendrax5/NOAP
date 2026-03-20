@@ -3,6 +3,7 @@ package workers
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"strconv"
@@ -148,7 +149,7 @@ func pollSNMPDevice(dev models.Device) {
 		Version:   gosnmp.Version2c,
 		Timeout:   3 * time.Second,
 		Retries:   1,
-		Logger:    gosnmp.NewLogger(log.New(log.Writer(), "", log.LstdFlags)),
+		Logger:    gosnmp.NewLogger(log.New(io.Discard, "", 0)),
 	}
 
 	if err := params.Connect(); err != nil {

@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"fmt"
+	"io"
+	"log"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -93,6 +95,7 @@ func DiscoverInterfaces(c *fiber.Ctx) error {
 		Version:   gosnmp.Version2c,
 		Timeout:   time.Duration(3) * time.Second,
 		Retries:   1,
+		Logger:    gosnmp.NewLogger(log.New(io.Discard, "", 0)),
 	}
 
 	if err := params.Connect(); err != nil {

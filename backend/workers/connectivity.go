@@ -2,6 +2,7 @@ package workers
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"time"
@@ -83,6 +84,7 @@ func testSNMP(dev models.Device) ProbeResult {
 		Version:   gosnmp.Version2c,
 		Timeout:   5 * time.Second,
 		Retries:   0,
+		Logger:    gosnmp.NewLogger(log.New(io.Discard, "", 0)),
 	}
 
 	if err := params.Connect(); err != nil {
