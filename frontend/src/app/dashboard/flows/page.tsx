@@ -239,23 +239,25 @@ export default function FlowsPage() {
       Promise.allSettled([
         api.getTopTalkers(range).then(d => {
           const rows = (d as any) ?? [];
-          if (rows.length > 0) { setTopTalkers(rows); setUsingDemo(false); }
+          setTopTalkers(rows.length > 0 ? rows : SAMPLE_TALKERS);
+          if (rows.length > 0) setUsingDemo(false);
         }),
         api.getFlowBandwidth(range).then(d => {
           const stats = (d as any) ?? null;
-          if (stats && stats.total_gb > 0) { setBwStats(stats); setUsingDemo(false); }
+          setBwStats(stats && (stats.active_flows ?? 0) + (stats.total_gb ?? 0) > 0 ? stats : SAMPLE_BW_STATS);
+          if (stats && (stats.active_flows ?? 0) > 0) setUsingDemo(false);
         }),
         api.getFlowTimeSeries(range).then(d => {
           const pts = (d as any) ?? [];
-          if (pts.length > 0) { setTimeSeries(pts); }
+          setTimeSeries(pts.length > 0 ? pts : SAMPLE_TIME_SERIES);
         }),
         api.getTopApplications(range).then(d => {
           const apps = (d as any) ?? [];
-          if (apps.length > 0) setTopApps(apps);
+          setTopApps(apps.length > 0 ? apps : SAMPLE_APPS);
         }),
         api.getTopASNs(range).then(d => {
           const asns = (d as any) ?? [];
-          if (asns.length > 0) setTopASNs(asns);
+          setTopASNs(asns.length > 0 ? asns : SAMPLE_ASNS);
         }),
       ]).finally(() => { setLoading(false); setLastUpdate(new Date()); });
     };
@@ -263,6 +265,7 @@ export default function FlowsPage() {
     const t = setInterval(fetchAll, 30_000);
     return () => clearInterval(t);
   }, [range]);
+
 
   const maxBytes   = topTalkers[0]?.total_bytes ?? 1;
   const totalBytes = topTalkers.reduce((s, t) => s + (t.total_bytes ?? 0), 0);
