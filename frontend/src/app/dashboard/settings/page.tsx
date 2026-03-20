@@ -445,7 +445,7 @@ export default function SettingsPage() {
                 {deliveries.map(d => (
                   <tr key={d.ID} style={{ borderBottom: "1px solid var(--color-border)" }}>
                     <td className="py-2 px-2 whitespace-nowrap font-mono" style={{ color: "var(--color-text-dim)" }}>
-                      {new Date(d.CreatedAt).toLocaleString()}
+                      {new Date(d.CreatedAt).toLocaleString("id-ID")}
                     </td>
                     <td className="py-2 px-2"><ChannelBadge channel={d.channel} /></td>
                     <td className="py-2 px-2"><StatusBadge status={d.status} /></td>

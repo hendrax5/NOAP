@@ -186,7 +186,7 @@ export default function TopTalkersPage() {
                     </div>
                     <div>
                       <span style={{ color:"var(--color-text-dim)" }}>Packets</span>
-                      <div className="font-semibold mt-0.5" style={{ color:"var(--color-text)" }}>{t.packets?.toLocaleString() ?? "—"}</div>
+                      <div className="font-semibold mt-0.5" style={{ color:"var(--color-text)" }}>{t.packets?.toLocaleString("id-ID") ?? "—"}</div>
                     </div>
                     <div>
                       <span style={{ color:"var(--color-text-dim)" }}>Dst ASN</span>

@@ -59,7 +59,7 @@ const CustomTooltipTime = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   return (
     <div className="rounded-xl px-3 py-2 text-xs shadow-lg border" style={{ background: "var(--color-surface-2)", borderColor: "var(--color-border)", color: "var(--color-text)" }}>
-      <div className="font-mono mb-1 text-[10px]" style={{ color: "var(--color-text-dim)" }}>{new Date(label).toLocaleString()}</div>
+      <div className="font-mono mb-1 text-[10px]" style={{ color: "var(--color-text-dim)" }}>{new Date(label).toLocaleString("id-ID")}</div>
       {payload.map((p: any) => (
         <div key={p.name} style={{ color: p.color }}>{p.name}: <span className="font-semibold">{Number(p.value).toFixed(2)}</span></div>
       ))}
@@ -448,7 +448,7 @@ export default function MetricsPage() {
                   style={{ borderBottom: "1px solid var(--color-border)", color: "var(--color-text)" }}
                 >
                   <td className="py-2 pr-6 font-mono text-xs" style={{ color: "var(--color-text-dim)" }}>
-                    {new Date(row.ts).toLocaleString()}
+                    {new Date(row.ts).toLocaleString("id-ID")}
                   </td>
                   <td className="py-2 pr-6 font-mono">
                     <span style={{ color: row.cpu > 80 ? "#f87171" : "var(--color-primary)" }}>

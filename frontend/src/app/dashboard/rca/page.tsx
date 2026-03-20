@@ -77,7 +77,7 @@ export default function RCA() {
                 </h3>
               </div>
               <span className="text-xs font-metric" style={{ color: "var(--color-text-dim)" }}>
-                {new Date(event.timestamp).toLocaleString()}
+                {new Date(event.timestamp).toLocaleString("id-ID")}
               </span>
             </div>
 

@@ -371,9 +371,9 @@ export default function SensorDetail() {
                                 tickFormatter={(tick) => {
                                     const d = new Date(tick);
                                     if (activeRange === '1h' || activeRange === '6h') {
-                                        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                        return d.toLocaleTimeString("id-ID", { hour: '2-digit', minute: '2-digit' });
                                     }
-                                    return d.toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                                    return d.toLocaleDateString("id-ID", { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
                                 }} 
                             />
                             <YAxis 
@@ -383,7 +383,7 @@ export default function SensorDetail() {
                                 tickFormatter={(val) => val >= 1000 ? `${(val/1000).toFixed(1)}k` : val}
                             />
                             <Tooltip 
-                                labelFormatter={(label) => new Date(label).toLocaleString()}
+                                labelFormatter={(label) => new Date(label).toLocaleString("id-ID")}
                                 contentStyle={{ backgroundColor: '#18181b', borderColor: '#3f3f46', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                                 itemStyle={{ color: '#e4e4e7', fontSize: '13px' }}
                                 labelStyle={{ color: '#a1a1aa', fontSize: '11px', marginBottom: '4px' }}

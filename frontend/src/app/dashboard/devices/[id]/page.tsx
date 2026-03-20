@@ -79,7 +79,7 @@ function BGPHistoryModal({
                 <YAxis tick={{ fill: "#71717a", fontSize: 10 }} />
                 <Tooltip
                   contentStyle={{ background: "#18181b", border: "1px solid #3f3f46", borderRadius: "8px", fontSize: "11px" }}
-                  labelFormatter={(v) => new Date(v).toLocaleString()}
+                  labelFormatter={(v) => new Date(v).toLocaleString("id-ID")}
                 />
                 <Area type="monotone" dataKey="prefixes_received" stroke="#818cf8" fill="#818cf8" fillOpacity={0.15} strokeWidth={2} dot={false} isAnimationActive={false} name="Prefixes Rx" />
               </AreaChart>
@@ -226,7 +226,7 @@ function ConfigTab({ deviceId }: { deviceId: string }) {
   };
 
   const fmtDate = (ts: string) => {
-    try { return new Date(ts).toLocaleString(); } catch { return ts; }
+    try { return new Date(ts).toLocaleString("id-ID"); } catch { return ts; }
   };
 
   const renderDiffLine = (line: string, i: number) => {
@@ -1036,7 +1036,7 @@ export default function DeviceDetail() {
                     {backupEvents.map((ev: any) => (
                       <tr key={ev.ID} className="hover:bg-zinc-800/30 transition-colors">
                         <td className="p-3 pl-5 text-zinc-400 text-xs whitespace-nowrap">
-                          {(() => { try { return new Date(ev.CreatedAt).toLocaleString(); } catch { return ev.CreatedAt; } })()}
+                          {(() => { try { return new Date(ev.CreatedAt).toLocaleString("id-ID"); } catch { return ev.CreatedAt; } })()}
                         </td>
                         <td className="p-3">
                           <span className={`px-2 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase border ${
