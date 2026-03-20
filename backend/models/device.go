@@ -19,6 +19,7 @@ type Device struct {
 	PollInterval   int       `json:"poll_interval" gorm:"default:300"`
 	LastSNMPStatus string    `json:"last_snmp_status" gorm:"default:'unknown'"`
 	LastCLIStatus  string    `json:"last_cli_status" gorm:"default:'unknown'"`
+	Status         string    `json:"status" gorm:"default:'unknown'"`
 	LastSeen       time.Time `json:"last_seen"`
 	AutoDiscover   bool      `json:"auto_discover" gorm:"default:false"`
 	Tenant         Tenant    `json:"-" gorm:"foreignKey:TenantID"`
